@@ -326,34 +326,29 @@
   function mktHeader() {
     var host = document.querySelector('[data-mkt-header]');
     if (!host) return;
-    var cur = currentFile();
 
-    // --- мегапанель «Поводы»: 7 плиток
-    var megaOcc = MEGA_OCCASIONS.map(function (o) {
-      return '<a class="mkt-mega__item" href="' + povodHref(o.slug) + '">' +
-        '<span class="mkt-mega__emoji" aria-hidden="true">' + o.emoji + '</span>' +
-        '<span class="mkt-mega__label">' + esc(o.label) + '</span></a>';
+    // --- КАТАЛОГ (Flowwow-style): категории слева, подкатегории в центре, промо справа
+    var catList = MEGA_SERVICES.map(function (s, i) {
+      return '<button type="button" class="catalog__cat' + (i === 0 ? ' is-on' : '') + '" data-cat="' + s.slug + '">' +
+        '<span class="e" aria-hidden="true">' + s.emoji + '</span>' +
+        '<span>' + esc(s.label) + '</span>' +
+        '<span class="chev" aria-hidden="true">›</span></button>';
     }).join('');
-
-    // --- мегапанель «Услуги»: 11 категорий с подпунктами (Шары первыми)
-    var megaSvc = MEGA_SERVICES.map(function (s) {
+    var catSubs = MEGA_SERVICES.map(function (s, i) {
       var subs = (s.sub || []).map(function (t) {
-        return '<a class="mkt-mega__sub" href="' + uslugiHref(s.slug) + '">' + esc(t) + '</a>';
+        return '<a href="' + uslugiHref(s.slug) + '">' + esc(t) + '</a>';
       }).join('');
-      return '<div class="mkt-mega__cat">' +
-        '<a class="mkt-mega__cathead" href="' + uslugiHref(s.slug) + '">' +
-          '<span class="mkt-mega__emoji" aria-hidden="true">' + s.emoji + '</span>' +
-          '<span class="mkt-mega__label">' + esc(s.label) + '</span></a>' +
-        (subs ? '<div class="mkt-mega__subs">' + subs + '</div>' : '') +
+      return '<div class="catalog__subgroup' + (i === 0 ? ' is-on' : '') + '" data-sub="' + s.slug + '">' +
+        '<div class="catalog__subhead">' + esc(s.label) + '</div>' +
+        '<div class="catalog__sublist">' + subs + '</div>' +
+        '<a class="catalog__suball" href="' + uslugiHref(s.slug) + '">Все предложения категории →</a>' +
         '</div>';
     }).join('');
-
-    var nav = MKT_NAV.map(function (n) {
-      var a = n.href === cur ? ' class="is-active" aria-current="page"' : '';
-      return '<a href="' + n.href + '"' + a + '>' + esc(n.label) + '</a>';
+    var catOcc = MEGA_OCCASIONS.map(function (o) {
+      return '<a href="' + povodHref(o.slug) + '"><span aria-hidden="true">' + o.emoji + '</span>' + esc(o.label) + '</a>';
     }).join('');
 
-    // --- мобменю: аккордеон-секции поводов/услуг
+    // --- мобменю: секции поводов/услуг
     var mobOcc = MEGA_OCCASIONS.map(function (o) {
       return '<a href="' + povodHref(o.slug) + '"><span class="mkt-mobnav__e">' + o.emoji + '</span>' + esc(o.label) + '</a>';
     }).join('');
@@ -383,45 +378,51 @@
           '<a href="platform.html">Платформа</a>' +
         '</span>' +
       '</div></div>' +
-      '<header class="mkt-header" data-mkt-mega-root><div class="mkt-header__inner">' +
+      '<header class="mkt-header mkt-header--fw" data-mkt-mega-root>' +
+      '<div class="mkt-header__inner">' +
         '<a class="mkt-logo" href="index.html" aria-label="Pinkshar — на главную">' +
           mktLogoSVG() + 'Pinkshar<span class="dot">.</span></a>' +
-        '<nav class="mkt-nav" aria-label="Разделы">' +
-          // мегапункт «Поводы»
-          '<div class="mkt-nav__mega" data-mega="occ">' +
-            '<button type="button" class="mkt-nav__trigger" data-mega-trigger="occ" aria-expanded="false">' +
-              'Поводы <span class="mkt-nav__chev" aria-hidden="true"></span></button>' +
-            '<div class="mkt-mega" data-mega-panel="occ" role="menu">' +
-              '<div class="mkt-mega__inner"><div class="mkt-mega__grid mkt-mega__grid--occ">' + megaOcc + '</div>' +
-              '<a class="mkt-mega__all" href="povod.html">Все поводы →</a></div>' +
-            '</div>' +
-          '</div>' +
-          // мегапункт «Услуги»
-          '<div class="mkt-nav__mega" data-mega="svc">' +
-            '<button type="button" class="mkt-nav__trigger" data-mega-trigger="svc" aria-expanded="false">' +
-              'Услуги <span class="mkt-nav__chev" aria-hidden="true"></span></button>' +
-            '<div class="mkt-mega mkt-mega--wide" data-mega-panel="svc" role="menu">' +
-              '<div class="mkt-mega__inner"><div class="mkt-mega__grid mkt-mega__grid--svc">' + megaSvc + '</div>' +
-              '<a class="mkt-mega__all" href="uslugi.html">Все услуги (11) →</a></div>' +
-            '</div>' +
-          '</div>' +
-          nav +
-        '</nav>' +
+        '<button type="button" class="hdr-cat" data-cat-trigger aria-expanded="false">' +
+          '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">' +
+            '<rect x="2" y="2" width="5.5" height="5.5" rx="1.4" fill="currentColor"/>' +
+            '<rect x="10.5" y="2" width="5.5" height="5.5" rx="1.4" fill="currentColor"/>' +
+            '<rect x="2" y="10.5" width="5.5" height="5.5" rx="1.4" fill="currentColor"/>' +
+            '<rect x="10.5" y="10.5" width="5.5" height="5.5" rx="1.4" fill="currentColor"/></svg>' +
+          '<span class="hdr-cat__txt">Каталог</span></button>' +
+        '<form class="hdr-search" action="uslugi.html" method="get" role="search" ' +
+              'onsubmit="location.href=\'uslugi.html\';return false;">' +
+          '<svg width="19" height="19" viewBox="0 0 19 19" fill="none" aria-hidden="true">' +
+            '<circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.7"/>' +
+            '<path d="M13 13l4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>' +
+          '<input type="search" name="q" placeholder="Найти шары, услуги, пакеты или повод…" autocomplete="off">' +
+        '</form>' +
+        '<a class="hdr-geo" href="o-platforme.html" aria-label="Город и доставка">' +
+          '<svg width="16" height="16" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 1.5c2.2 0 4 1.7 4 3.9 0 2.6-2.7 4.8-3.8 5.6a.3.3 0 0 1-.4 0C5.7 10.2 3 8 3 5.4 3 3.2 4.8 1.5 7 1.5Z" stroke="currentColor" stroke-width="1.3"/><circle cx="7" cy="5.3" r="1.3" fill="currentColor"/></svg>' +
+          '<span><b>Москва</b><i>Как можно скорее</i></span></a>' +
         '<div class="mkt-header__end">' +
-          '<button class="mkt-header__search" type="button" aria-label="Поиск" data-mkt-search>' +
-            '<svg width="19" height="19" viewBox="0 0 19 19" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.7"/><path d="M13 13l4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>' +
-          '</button>' +
-          '<span class="mkt-header__geo" aria-label="Город">' +
-            '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 1.5c2.2 0 4 1.7 4 3.9 0 2.6-2.7 4.8-3.8 5.6a.3.3 0 0 1-.4 0C5.7 10.2 3 8 3 5.4 3 3.2 4.8 1.5 7 1.5Z" stroke="currentColor" stroke-width="1.3"/><circle cx="7" cy="5.3" r="1.3" fill="currentColor"/></svg>' +
-            'Москва</span>' +
           cartIcon +
-          '<a class="mkt-header__login" href="client.html">Войти</a>' +
-          '<a class="btn btn--primary" href="pakety.html">Собрать праздник</a>' +
+          '<a class="hdr-login" href="client.html">' +
+            '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="6.5" r="3.2" stroke="currentColor" stroke-width="1.5"/><path d="M3.8 17c.6-3.2 3.1-5 6.2-5s5.6 1.8 6.2 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' +
+            '<span>Войти</span></a>' +
           '<button class="mkt-burger" type="button" data-mkt-burger aria-label="Меню" aria-expanded="false">' +
             '<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M3 6h16M3 11h16M3 16h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
           '</button>' +
         '</div>' +
-      '</div></header>' +
+      '</div>' +
+      // --- выпадающий каталог
+      '<div class="catalog" data-catalog>' +
+        '<div class="catalog__inner">' +
+          '<div class="catalog__cats">' + catList + '</div>' +
+          '<div class="catalog__subs">' + catSubs + '</div>' +
+          '<div class="catalog__promo">' +
+            '<span class="catalog__promo-cap">Выберите повод</span>' +
+            '<div class="catalog__occ">' + catOcc + '</div>' +
+            '<a class="catalog__card" href="pakety.html">' +
+              '<h5>Готовые пакеты под ключ</h5><p>Шары и услуги собраны заранее — один чек, фикс-цена.</p></a>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '</header>' +
       // мобильное меню (вне потока, выезжает справа)
       '<div class="mkt-mobnav" data-mkt-mobnav>' +
         '<div class="mkt-mobnav__head">' +
@@ -440,33 +441,43 @@
         '</div>' +
       '</div>';
 
-    // --- интерактив мегаменю (hover на десктопе + click/тач) ---
-    var megaRoot = host.querySelector('[data-mkt-mega-root]');
-    function closeMega() {
-      host.querySelectorAll('.mkt-nav__mega').forEach(function (m) { m.classList.remove('open'); });
-      host.querySelectorAll('[data-mega-trigger]').forEach(function (t) { t.setAttribute('aria-expanded', 'false'); });
+    // --- интерактив каталога (Flowwow): кнопка открывает, hover переключает категорию ---
+    var headerEl = host.querySelector('[data-mkt-mega-root]');
+    var catalog = host.querySelector('[data-catalog]');
+    var catTrigger = host.querySelector('[data-cat-trigger]');
+    function openCat() {
+      if (!catalog) return;
+      catalog.classList.add('open');
+      headerEl.classList.add('cat-open');
+      if (catTrigger) catTrigger.setAttribute('aria-expanded', 'true');
     }
-    function openMega(key) {
-      host.querySelectorAll('.mkt-nav__mega').forEach(function (m) {
-        var on = m.getAttribute('data-mega') === key;
-        m.classList.toggle('open', on);
-        var t = m.querySelector('[data-mega-trigger]');
-        if (t) t.setAttribute('aria-expanded', on ? 'true' : 'false');
-      });
+    function closeCat() {
+      if (!catalog) return;
+      catalog.classList.remove('open');
+      headerEl.classList.remove('cat-open');
+      if (catTrigger) catTrigger.setAttribute('aria-expanded', 'false');
     }
-    host.querySelectorAll('.mkt-nav__mega').forEach(function (m) {
-      var key = m.getAttribute('data-mega');
-      m.addEventListener('mouseenter', function () { openMega(key); });
-      m.addEventListener('mouseleave', function () { closeMega(); });
-      var trig = m.querySelector('[data-mega-trigger]');
-      if (trig) trig.addEventListener('click', function (e) {
+    if (catTrigger) {
+      catTrigger.addEventListener('click', function (e) {
         e.preventDefault();
-        if (m.classList.contains('open')) closeMega(); else openMega(key);
+        if (catalog.classList.contains('open')) closeCat(); else openCat();
       });
+    }
+    // hover-переключение подкатегорий
+    host.querySelectorAll('.catalog__cat').forEach(function (btn) {
+      function activate() {
+        var key = btn.getAttribute('data-cat');
+        host.querySelectorAll('.catalog__cat').forEach(function (b) { b.classList.toggle('is-on', b === btn); });
+        host.querySelectorAll('.catalog__subgroup').forEach(function (g) {
+          g.classList.toggle('is-on', g.getAttribute('data-sub') === key);
+        });
+      }
+      btn.addEventListener('mouseenter', activate);
+      btn.addEventListener('focus', activate);
     });
-    // закрытие по клику вне и по Esc
+    // закрытие каталога: клик вне шапки, Esc
     document.addEventListener('click', function (e) {
-      if (megaRoot && !megaRoot.contains(e.target)) closeMega();
+      if (headerEl && !headerEl.contains(e.target)) closeCat();
     });
 
     // --- интерактив бургера ---
@@ -476,10 +487,8 @@
     host.addEventListener('click', function (e) {
       if (e.target.closest('[data-mkt-burger]')) { openMob(); }
       else if (e.target.closest('[data-mkt-mobclose]') || e.target.closest('.mkt-mobnav a')) { closeMob(); }
-      // поиск-иконка: в P0 ведёт на индекс услуг (полноценный поиск — P1)
-      else if (e.target.closest('[data-mkt-search]')) { location.href = 'uslugi.html'; }
     });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeMob(); closeMega(); } });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeMob(); closeCat(); } });
     var scrim = document.querySelector('[data-scrim]');
     if (scrim) scrim.addEventListener('click', closeMob);
 
@@ -491,45 +500,66 @@
   function mktFooter() {
     var host = document.querySelector('[data-mkt-footer]');
     if (!host) return;
-    var occ = (P.occasions || []).slice(0, 6).map(function (o) {
-      return '<li><a href="povod.html">' + esc(o.name) + '</a></li>';
-    }).join('');
-    var svc = (P.serviceCatalog || P.services || []).slice(0, 6).map(function (s) {
-      return '<li><a href="uslugi.html">' + esc(s.name) + '</a></li>';
-    }).join('');
+
+    // --- каталог услуг (Yandex-style): иконка + название, ведут в категорию
+    var catItems = MEGA_SERVICES.slice(0, 7).map(function (s) {
+      return '<a class="ycat__item" href="' + uslugiHref(s.slug) + '">' +
+        '<span class="e" aria-hidden="true">' + s.emoji + '</span>' + esc(s.label) + '</a>';
+    }).join('') +
+      '<a class="ycat__item ycat__item--all" href="uslugi.html">' +
+        '<span class="e" aria-hidden="true">•••</span>Посмотреть все услуги</a>';
+
+    function app(store, sub, name) {
+      return '<a class="dfoot__app" href="o-platforme.html"><span>' + esc(sub) + '<br><b>' + esc(name) + '</b></span></a>';
+    }
 
     host.innerHTML =
-      '<div class="mkt-footer__inner">' +
-        '<div class="mkt-footer__top">' +
-          '<div class="mkt-footer__brand">' +
+      // (1) светлый блок «Каталог праздника в Москве»
+      '<div class="ycat"><div class="ycat__inner">' +
+        '<h2 class="ycat__title">Каталог праздника в Москве</h2>' +
+        '<div class="ycat__note">' +
+          'Опишите повод — а команду праздника соберём мы.<br>' +
+          'Подрядчики проверены и работают по рейтингу и отзывам других клиентов.<br>' +
+          'Один чек, фиксированная цена, оплата защищена в эскроу.' +
+        '</div>' +
+        '<div class="ycat__grid">' + catItems + '</div>' +
+      '</div></div>' +
+      // (2) тёмный подвал
+      '<div class="dfoot"><div class="dfoot__inner">' +
+        '<div class="dfoot__cols">' +
+          '<div class="dfoot__brand">' +
             '<span class="mkt-logo">' + mktLogoSVG() + 'Pinkshar<span class="dot">.</span></span>' +
-            '<p>Повод-центричный маркетплейс праздника. Шары, десерты, цветы, съёмка и шоу — в одной заявке и одном чеке. Москва.</p>' +
-            '<ul class="mkt-footer__guarantees">' +
-              '<li>Оплата в эскроу до выполнения</li>' +
-              '<li>Возврат, если подрядчик подвёл</li>' +
-              '<li>Модерация всех исполнителей</li>' +
-            '</ul>' +
+            '<p>Повод-центричный маркетплейс праздника. Шары, десерты, цветы, съёмка и шоу — в одной заявке. Москва.</p>' +
           '</div>' +
-          '<div class="mkt-footer__col"><h4>Поводы</h4><ul>' + occ + '</ul></div>' +
-          '<div class="mkt-footer__col"><h4>Услуги</h4><ul>' + svc + '</ul></div>' +
-          '<div class="mkt-footer__col"><h4>Платформа</h4><ul>' +
-            '<li><a href="o-platforme.html">О платформе</a></li>' +
-            '<li><a href="pakety.html">Пакеты</a></li>' +
-            '<li><a href="platform.html">Аналитика площадки</a></li>' +
-            '<li><a href="client.html">Кабинет клиента</a></li>' +
-          '</ul></div>' +
-          '<div class="mkt-footer__col"><h4>Подрядчикам</h4><ul>' +
-            '<li><a href="partneram.html">Стать подрядчиком</a></li>' +
-            '<li><a href="partner.html">Кабинет подрядчика</a></li>' +
-            '<li><a href="partneram.html">Комиссия 15%</a></li>' +
-            '<li><a href="o-platforme.html">Москва · доставка от 700 ₽</a></li>' +
-          '</ul></div>' +
+          '<div class="dfoot__col"><h4>Заказчику</h4>' +
+            '<a href="pakety.html">Собрать праздник</a>' +
+            '<a href="client.html">Мои заказы</a>' +
+            '<a href="korzina.html">Корзина</a>' +
+            '<a href="o-platforme.html">Как это работает</a>' +
+          '</div>' +
+          '<div class="dfoot__col"><h4>Подрядчику</h4>' +
+            '<a href="partneram.html">Стать подрядчиком</a>' +
+            '<a href="partner.html">Кабинет подрядчика</a>' +
+            '<a href="partneram.html">Комиссия 15%</a>' +
+          '</div>' +
+          '<div class="dfoot__col"><h4>Площадка</h4>' +
+            '<a href="o-platforme.html">О платформе</a>' +
+            '<a href="platform.html">Аналитика</a>' +
+            '<a href="o-platforme.html">Эскроу и гарантии</a>' +
+          '</div>' +
+          '<div class="dfoot__apps">' +
+            app('apple', 'Скоро в', 'App Store') +
+            app('google', 'Скоро в', 'Google Play') +
+          '</div>' +
         '</div>' +
-        '<div class="mkt-footer__legal">' +
-          '<span>© 2026 Pinkshar · маркетплейс праздника · Москва</span>' +
-          '<span>Мин. заказ 3 500 ₽ · комиссия с подрядчика 15%</span>' +
+        '<div class="dfoot__legal">' +
+          '<span>Москва</span>' +
+          '<a href="o-platforme.html">Пользовательское соглашение</a>' +
+          '<a href="o-platforme.html">Правила площадки</a>' +
+          '<span class="sp"></span>' +
+          '<span>© 2026 Pinkshar · мин. заказ 3 500 ₽ · комиссия 15%</span>' +
         '</div>' +
-      '</div>';
+      '</div></div>';
   }
 
   /* ---------- mktPhoto(): <img> с onerror-фолбэком на брендовую плитку ----------
