@@ -1,0 +1,7 @@
+АРХИТЕКТУРА-v2.md
+*.bak
+*.bak*
+.DS_Store
+assets/img/cat/*-5.jpg
+assets/img/cat/*-6.jpg
+.claude/

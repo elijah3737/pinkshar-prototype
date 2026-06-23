@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Профиль подрядчика — Pinkshar</title>
+  <meta name="description" content="Профиль подрядчика Pinkshar: рейтинг, услуги и цены, портфолио, отзывы, зона выезда. Проверен платформой, работает через эскроу.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="assets/app.css?v=8">
+</head>
+<body>
+  <!-- демо-бар + sticky-хедер с мегаменю + мобменю (рендерит shell.js) -->
+  <div data-mkt-header></div>
+
+  <main id="view">
+    <!-- Профиль подрядчика рендерит window.renderPage из window.PINK.contractors
+         по ?id=. Стаб: каркас + крошки. Агент страницы профиля достроит
+         pp-prof__head (рейтинг/бейдж), услуги-цены, портфолио, отзывы, зону/даты. -->
+    <div class="wrap" data-pp-root></div>
+  </main>
+
+  <footer data-mkt-footer></footer>
+
+  <script src="assets/data.js?v=8"></script>
+  <script src="assets/shell.js?v=8"></script>
+  <script>
+  /* ============================================================
+     ПРОФИЛЬ ПОДРЯДЧИКА (PP) — partner-profile.html?id=<contractorId>
+     Жёсткий шаблон: крошки → шапка (рейтинг/бейдж эскроу) → его товары
+     (карточки → tovar.html?id=) → портфолио (фото из gallery) → отзывы
+     с ответами подрядчика → зона выезда + мок-календарь дат → CTA.
+     Только навигация (drill-in), без попапов. Данные из window.PINK.
+     ============================================================ */
+  window.renderPage = function () {
+    var S = window.SHELL, P = window.PINK;
+    var root = document.querySelector('[data-pp-root]');
+    if (!root || !S || !P) return;
+
+    // id из query; если нет/не найден — берём первого подрядчика (бриф)
+    var id = S.qparam('id');
+    var c = (id && S.contractorById && S.contractorById(id)) ||
+            (P.contractors && P.contractors[0]) || null;
+
+    if (!c) {
+      root.innerHTML =
+        S.crumbs([{ label: 'Главная', href: 'index.html' }, { label: 'Подрядчик' }]) +
+        '<div class="empty"><div class="empty__icon">🤝</div>' +
+        '<div class="empty__title">Подрядчик не найден</div>' +
+        '<p>Откройте профиль из карточки товара.</p>' +
+        '<div style="margin-top:16px"><a class="btn btn--primary" href="uslugi.html">Все услуги</a></div></div>';
+      return;
+    }
+
+    var esc = S.esc, money = S.money;
+    var svc = (P.serviceCatalog || []).find(function (s) { return s.slug === c.category; }) || {};
+    var svcMeta = (P.services || []).find(function (s) { return s.id === c.category; }) || {};
+    var emoji = svc.emoji || svcMeta.emoji || '🎈';
+    // все позиции подрядчика (фильтр по contractorId по всему каталогу товаров)
+    var prods = (P.products || []).filter(function (p) { return p.contractorId === c.id; });
+    document.title = c.name + ' — Pinkshar';
+
+    var ratingStr = String(c.rating).replace('.', ',');
+    var initials = S.initials(c.name);
+
+    /* ---- агрегаты из товаров подрядчика (рейтинг/отзывы товаров) ---- */
+    var prodReviewsTotal = prods.reduce(function (n, p) { return n + (p.reviewsCount || 0); }, 0);
+
+    /* ---------- 1. ШАПКА ---------- */
+    var head =
+      '<div class="pp-prof__head">' +
+        '<div class="pp-prof__avatar" aria-hidden="true">' + emoji + '</div>' +
+        '<div class="pp-prof__id">' +
+          '<h1 class="pp-prof__name">' + esc(c.name) + '</h1>' +
+          '<div class="pp-prof__cat">' +
+            '<a href="' + S.uslugiHref(c.category) + '">' + esc(svc.name || svcMeta.name || 'Услуга') + '</a>' +
+            ' · ' + esc(c.owner) + ' · Москва' +
+          '</div>' +
+          '<div class="pp-prof__metrics">' +
+            '<div class="pp-prof__metric"><span class="v">' + ratingStr +
+              '<span class="star" aria-hidden="true"> ★</span></span>' +
+              '<span class="l">' + c.reviews + ' оценок</span></div>' +
+            '<div class="pp-prof__metric"><span class="v">' + c.orders + '</span>' +
+              '<span class="l">заказов на платформе</span></div>' +
+            '<div class="pp-prof__metric"><span class="v">' + c.sla + '%</span>' +
+              '<span class="l">заказов доведено</span></div>' +
+            '<div class="pp-prof__metric"><span class="v">' + prods.length + '</span>' +
+              '<span class="l">позиций в каталоге</span></div>' +
+          '</div>' +
+          '<div class="pp-prof__verify">' +
+            '<svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">' +
+              '<path d="M7.5 1l1.6 1.2 2 .1.6 1.9 1.6 1.2-.6 1.9.6 1.9-1.6 1.2-.6 1.9-2 .1L7.5 14l-1.6-1.2-2-.1-.6-1.9L1.7 9.6l.6-1.9-.6-1.9 1.6-1.2.6-1.9 2-.1L7.5 1z" fill="currentColor" opacity=".18"/>' +
+              '<path d="M5 7.6l1.8 1.8L10.2 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>' +
+            '</svg>' +
+            'Проверен платформой · работает через эскроу' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    /* ---------- 2. ЕГО ТОВАРЫ/УСЛУГИ (карточки → tovar.html) ---------- */
+    function prodCard(p) {
+      var g = { src: (p.photos && p.photos[0]) || '', label: p.name, emoji: emoji };
+      var fb = "this.closest('.prod-card__media').classList.add('prod-card__media--fallback')";
+      var occBadge = '';
+      if (p.occasions && p.occasions.length) {
+        var occ = (P.occasions || []).find(function (o) { return o.id === p.occasions[0]; });
+        if (occ) occBadge = '<span class="prod-card__date">' + occ.emoji + ' ' + esc(occ.name) + '</span>';
+      }
+      var sale = (p.oldPrice && p.oldPrice > p.price)
+        ? '<span class="prod-card__sale">−' + Math.round((1 - p.price / p.oldPrice) * 100) + '%</span>' : '';
+      var fixed = p.priceType !== 'from';
+      return '<div class="prod-card">' +
+        '<a class="prod-card__media" href="' + S.tovarHref(p.id) + '" data-emoji="' + esc(emoji) + '" aria-label="' + esc(p.name) + '">' +
+          occBadge + sale +
+          '<img src="' + esc(g.src) + '" alt="' + esc(p.name) + '" loading="lazy" onerror="' + fb + '">' +
+        '</a>' +
+        '<div class="prod-card__body">' +
+          '<div class="prod-card__name"><a href="' + S.tovarHref(p.id) + '">' + esc(p.name) + '</a></div>' +
+          '<div class="prod-card__meta">' +
+            '<span class="prod-card__rating"><span class="star" aria-hidden="true">★</span>' +
+              String(p.rating).replace('.', ',') + '</span>' +
+            '<span>' + (p.reviewsCount || 0) + ' отзыв.</span>' +
+          '</div>' +
+          '<div class="prod-card__foot">' +
+            '<div class="prod-card__price">' +
+              (fixed ? '' : '<span class="prod-card__from">от</span>') +
+              '<span class="prod-card__amount">' + money(p.price) + '</span>' +
+              (p.oldPrice ? '<span class="prod-card__old">' + money(p.oldPrice) + '</span>' : '') +
+            '</div>' +
+            (fixed
+              ? '<button class="btn btn--primary btn--sm" type="button" data-add="' + esc(p.id) + '">В корзину</button>'
+              : '<a class="btn btn--ghost btn--sm" href="' + S.tovarHref(p.id) + '">Подробнее</a>') +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+    var prodsSection = prods.length
+      ? '<section class="pp-sec">' +
+          '<h2 class="pp-sec__title">Товары и услуги — ' + prods.length + '</h2>' +
+          '<div class="prod-grid">' + prods.map(prodCard).join('') + '</div>' +
+        '</section>'
+      : '';
+
+    /* ---------- 3. ПОРТФОЛИО (реальные фото из gallery) ----------
+       Берём фото подрядчика из его товаров (photos), добиваем галереей
+       по поводам его позиций — без повторов, до 8 плиток. */
+    var occSet = {};
+    prods.forEach(function (p) { (p.occasions || []).forEach(function (o) { occSet[o] = 1; }); });
+    var portfolio = [];
+    var seen = {};
+    prods.forEach(function (p) {
+      (p.photos || []).forEach(function (src) {
+        if (!seen[src]) { seen[src] = 1; portfolio.push({ src: src, label: p.name, emoji: emoji }); }
+      });
+    });
+    (P.gallery || []).forEach(function (g) {
+      if (portfolio.length >= 8) return;
+      if (occSet[g.occasion] && !seen[g.src]) { seen[g.src] = 1; portfolio.push(g); }
+    });
+    portfolio = portfolio.slice(0, 8);
+    var portfolioSection = portfolio.length
+      ? '<section class="pp-sec">' +
+          '<h2 class="pp-sec__title">Портфолио работ</h2>' +
+          '<div class="pp-portfolio">' +
+            portfolio.map(function (g) { return S.mktPhoto(g, true); }).join('') +
+          '</div>' +
+        '</section>'
+      : '';
+
+    /* ---------- 4. ОТЗЫВЫ с ответами подрядчика ----------
+       Собираем отзывы из товаров подрядчика; добавляем короткий ответ
+       исполнителя (мок, привязан к имени студии). */
+    var reviewItems = [];
+    prods.forEach(function (p) {
+      (p.reviews || []).forEach(function (r) {
+        reviewItems.push({ r: r, prod: p });
+      });
+    });
+    reviewItems = reviewItems.slice(0, 5);
+    var replyTexts = [
+      'Спасибо за тёплые слова! Рады, что праздник удался — ждём вас снова 🩷',
+      'Благодарим за отзыв! Всегда стараемся приехать точно ко времени.',
+      'Спасибо, что выбрали нас. Передадим команде — им будет приятно!',
+      'Очень ценим вашу оценку. До новых поводов!',
+      'Спасибо! Подбор цветов под повод — наша любимая часть работы.'
+    ];
+    function stars(n) {
+      var full = '★★★★★'.slice(0, n), empty = '☆☆☆☆☆'.slice(0, 5 - n);
+      return full + empty;
+    }
+    var reviewsSection = '';
+    if (reviewItems.length) {
+      var rows = reviewItems.map(function (it, i) {
+        var r = it.r;
+        var photo = r.photo
+          ? '<div class="review__photo" data-emoji="' + esc(emoji) + '">' +
+              '<img src="' + esc(r.photo) + '" alt="Фото к отзыву" loading="lazy" ' +
+              'onerror="this.closest(\'.review__photo\').classList.add(\'mkt-photo--fallback\')"></div>'
+          : '';
+        return '<div class="review">' +
+          '<div class="review__main">' +
+            '<div class="review__head">' +
+              '<span class="review__author">' + esc(r.author) + '</span>' +
+              '<span class="review__stars" aria-label="Оценка ' + r.rating + ' из 5">' + stars(r.rating) + '</span>' +
+            '</div>' +
+            '<p class="review__text">' + esc(r.text) + '</p>' +
+            '<div class="review__text" style="margin-top:8px">' +
+              '<a class="review__author" style="font-size:13px" href="' + S.tovarHref(it.prod.id) + '">' +
+                'К товару: ' + esc(it.prod.name) + ' →</a>' +
+            '</div>' +
+            '<div class="pp-reply">' +
+              '<span class="pp-reply__who">' + esc(c.name) + ' ответил:</span> ' +
+              esc(replyTexts[i % replyTexts.length]) +
+            '</div>' +
+          '</div>' + photo +
+        '</div>';
+      }).join('');
+      reviewsSection =
+        '<section class="pp-sec">' +
+          '<h2 class="pp-sec__title">Отзывы — ' + ratingStr + ' ★ по ' + c.reviews + ' оценкам</h2>' +
+          '<div class="reviews">' + rows + '</div>' +
+        '</section>';
+    }
+
+    /* ---------- 5. ЗОНА ВЫЕЗДА + мок-календарь занятости ----------
+       Даты июнь–июль 2026. Занятость — детерминированно от id подрядчика,
+       чтобы у разных подрядчиков были разные «занятые» дни. */
+    var days = [];
+    var base = new Date(2026, 5, 23); // 23.06.2026
+    var seed = (c.id.charCodeAt(1) || 1) * 7;
+    for (var d = 0; d < 21; d++) {
+      var dt = new Date(base.getTime() + d * 86400000);
+      var dd = dt.getDate();
+      // занят примерно каждый 4-5-й день, со сдвигом от seed
+      var busy = ((dd + seed) % 5 === 0) || ((dd + seed) % 7 === 0);
+      days.push({ dd: dd, mon: dt.getMonth(), busy: busy });
+    }
+    var MON = ['июн', 'июл'];
+    var calCells = days.map(function (x) {
+      var cls = 'pp-day' + (x.busy ? ' pp-day--busy' : ' pp-day--free');
+      return '<div class="' + cls + '">' +
+        '<span class="pp-day__n">' + x.dd + '</span>' +
+        '<span class="pp-day__m">' + (x.mon === 5 ? 'июн' : 'июл') + '</span>' +
+        '</div>';
+    }).join('');
+    var zoneSection =
+      '<section class="pp-sec">' +
+        '<h2 class="pp-sec__title">Зона выезда и свободные даты</h2>' +
+        '<div class="pp-zone">' +
+          '<div class="pp-zone__card">' +
+            '<div class="pp-zone__k">Зона выезда</div>' +
+            '<div class="pp-zone__v">Москва в пределах МКАД — бесплатно</div>' +
+            '<div class="pp-zone__k" style="margin-top:14px">За МКАД</div>' +
+            '<div class="pp-zone__v">+ 40 ₽/км от МКАД, по согласованию</div>' +
+            '<div class="pp-zone__k" style="margin-top:14px">Срок сборки</div>' +
+            '<div class="pp-zone__v">от 1–2 дней · сложный декор от 7 дней</div>' +
+          '</div>' +
+          '<div class="pp-zone__card">' +
+            '<div class="pp-zone__k">Календарь занятости · ближайшие 3 недели</div>' +
+            '<div class="pp-cal">' + calCells + '</div>' +
+            '<div class="pp-cal__legend">' +
+              '<span><i class="pp-dot pp-dot--free"></i>Свободно</span>' +
+              '<span><i class="pp-dot pp-dot--busy"></i>Занято</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</section>';
+
+    /* ---------- 6. CTA «Заказать у него» ---------- */
+    var firstProd = prods[0];
+    var ctaSection =
+      '<section class="pp-cta">' +
+        '<div class="pp-cta__text">' +
+          '<div class="pp-cta__title">Заказать у «' + esc(c.name) + '»</div>' +
+          '<p class="pp-cta__sub">Оплата удерживается в эскроу до выполнения. ' +
+            'Подрядчик подтверждает заявку, вы платите один раз — Pinkshar гарантирует сделку.</p>' +
+        '</div>' +
+        '<div class="pp-cta__btns">' +
+          (firstProd
+            ? '<a class="btn btn--primary" href="' + S.tovarHref(firstProd.id) + '">Выбрать позицию</a>'
+            : '') +
+          '<a class="btn btn--ghost" href="' + S.uslugiHref(c.category) + '">Все ' +
+            esc((svc.name || svcMeta.name || 'услуги').toLowerCase()) + '</a>' +
+        '</div>' +
+      '</section>';
+
+    /* ---------- СБОРКА ---------- */
+    root.innerHTML =
+      S.crumbs([
+        { label: 'Главная', href: 'index.html' },
+        { label: 'Услуги', href: 'uslugi.html' },
+        { label: svc.name || svcMeta.name || 'Услуга', href: S.uslugiHref(c.category) },
+        { label: c.name }
+      ]) +
+      '<div class="pp-prof">' +
+        head + prodsSection + portfolioSection + reviewsSection + zoneSection + ctaSection +
+      '</div>';
+
+    /* ---- «В корзину» на карточках товаров (без перехода) ---- */
+    root.querySelectorAll('[data-add]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        S.addToCart(btn.getAttribute('data-add'), 1);
+        btn.textContent = 'В корзине ✓';
+        btn.classList.add('is-added');
+      });
+    });
+  };
+  </script>
+</body>
+</html>

@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Подрядчикам — Pinkshar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="assets/app.css?v=8">
+</head>
+<body>
+  <div data-mkt-header></div>
+
+  <main id="view">
+    <noscript>
+      <section class="mkt-band"><div class="mkt-band__inner" style="text-align:center">
+        <h1 class="mkt-h2">Подрядчикам Pinkshar</h1>
+        <p class="mkt-lead" style="margin:0 auto">Готовые заявки на праздники с клиентом и оплатой
+          в эскроу. Комиссия 15% только с выполненных заказов. Включите JavaScript, чтобы
+          оставить заявку, или напишите нам напрямую.</p>
+      </div></section>
+    </noscript>
+  </main>
+
+  <!-- page-scoped: префикс .pr- (partner-page), без переопределения общих токенов -->
+  <style>
+    .pr-calc{display:grid;grid-template-columns:1.05fr .95fr;gap:var(--s-7);align-items:center}
+    .pr-calc__visual{display:grid;gap:var(--s-3)}
+    .pr-flow{display:flex;flex-direction:column;gap:var(--s-2)}
+    .pr-flow__row{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);
+      padding:var(--s-4) var(--s-5);background:var(--card);border:1px solid var(--line);
+      border-radius:var(--r-md);box-shadow:var(--sh-card)}
+    .pr-flow__row--accent{background:linear-gradient(150deg,var(--pink-strong),var(--plum));
+      border-color:transparent;color:#fff}
+    .pr-flow__row--commission{background:var(--pink-ghost);border-style:dashed;box-shadow:none}
+    .pr-flow__k{font-weight:600;font-size:14.5px}
+    .pr-flow__sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+    .pr-flow__row--accent .pr-flow__sub{color:rgba(255,255,255,.82)}
+    .pr-flow__v{font-family:var(--font-mono);font-weight:600;font-size:18px;
+      font-variant-numeric:tabular-nums;white-space:nowrap}
+    .pr-flow__row--accent .pr-flow__v{font-size:22px}
+    .pr-flow__arrow{display:flex;justify-content:center;color:var(--faint);font-size:14px;
+      line-height:1}
+    .pr-calc__amounts{display:flex;flex-wrap:wrap;gap:var(--s-2)}
+    .pr-amt{height:36px;padding:0 16px;border-radius:var(--r-pill);background:var(--card);
+      border:1px solid var(--line);font-family:var(--font-mono);font-weight:600;font-size:13.5px;
+      color:var(--muted);transition:all .14s ease}
+    .pr-amt:hover{border-color:var(--paper-edge);color:var(--ink)}
+    .pr-amt.active{background:var(--pink-strong);border-color:var(--pink-strong);color:#fff}
+    .pr-benefits{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-4)}
+    .pr-benefit{display:flex;flex-direction:column;gap:8px;padding:var(--s-5);
+      background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+      box-shadow:var(--sh-card);transition:transform .14s ease,box-shadow .14s ease}
+    .pr-benefit:hover{transform:translateY(-3px);box-shadow:var(--sh-pop)}
+    .pr-benefit__e{font-size:26px;line-height:1}
+    .pr-benefit__t{font-weight:700;font-size:15.5px;line-height:1.3}
+    .pr-benefit__d{font-size:13.5px;color:var(--muted);line-height:1.5;margin:0}
+    .pr-partners{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s-4)}
+    .pr-partner{display:flex;flex-direction:column;gap:var(--s-3);padding:var(--s-5);
+      background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+      box-shadow:var(--sh-card)}
+    .pr-partner__top{display:flex;align-items:center;gap:var(--s-3)}
+    .pr-partner__name{font-weight:700;font-size:15px;line-height:1.2}
+    .pr-partner__cat{font-size:12.5px;color:var(--muted)}
+    .pr-partner__stats{display:flex;justify-content:space-between;gap:var(--s-2);
+      padding-top:var(--s-3);border-top:1px solid var(--line)}
+    .pr-partner__stat{display:flex;flex-direction:column;gap:2px}
+    .pr-partner__sv{font-family:var(--font-mono);font-weight:600;font-size:15px;color:var(--ink)}
+    .pr-partner__sl{font-size:11px;color:var(--muted)}
+    .pr-twoside{position:relative}
+    .pr-twoside__link{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+      z-index:2;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
+    .pr-twoside__node{width:46px;height:46px;border-radius:50%;display:flex;
+      align-items:center;justify-content:center;background:var(--card);
+      border:1px solid var(--line);box-shadow:var(--sh-pop);color:var(--pink-strong)}
+    .pr-twoside__cap{font-family:var(--font-mono);font-size:11px;font-weight:600;
+      letter-spacing:.02em;color:var(--muted);background:var(--card);
+      padding:1px 8px;border-radius:var(--r-pill);border:1px solid var(--line)}
+    .pr-quote{max-width:80ch;margin:0 auto;text-align:center}
+    .pr-quote__text{font-family:var(--font-display);font-weight:600;
+      font-size:clamp(22px,3vw,32px);line-height:1.3;letter-spacing:-.01em;
+      color:var(--ink);margin:0 0 var(--s-5)}
+    .pr-quote__who{font-size:14px;color:var(--muted)}
+    .pr-quote__who strong{color:var(--plum);font-weight:600}
+    .pr-form{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-3)}
+    .pr-form .field--full{grid-column:1 / -1}
+    .pr-ok{text-align:center;padding:var(--s-5) 0}
+    .pr-ok__badge{width:64px;height:64px;border-radius:50%;margin:0 auto var(--s-4);
+      display:flex;align-items:center;justify-content:center;background:var(--good-soft);
+      color:var(--good-text);font-size:30px}
+    @media (max-width:860px){
+      .pr-calc{grid-template-columns:1fr;gap:var(--s-6)}
+      .pr-benefits{grid-template-columns:1fr}
+      .pr-partners{grid-template-columns:1fr 1fr}
+      .pr-form{grid-template-columns:1fr}
+      .pr-twoside__link{position:static;transform:none;flex-direction:row;
+        justify-content:center;margin:calc(var(--s-2) * -1) 0}
+      .pr-twoside__node svg{transform:rotate(90deg)}
+    }
+    @media (max-width:560px){ .pr-partners{grid-template-columns:1fr} }
+  </style>
+
+  <script>
+  window.renderPage = function () {
+    var P = window.PINK, S = window.SHELL;
+    var pi = P.partnerInfo, kpi = P.platformKPI;
+    var view = document.getElementById('view');
+
+    /* ---- hero collage из реальных фото (4 повода) ---- */
+    var heroPhotos = [P.gallery[0], P.gallery[6], P.gallery[2]];
+    var heroCollage = heroPhotos.map(function (g) { return S.mktPhoto(g, true); }).join('');
+
+    /* ---- шаги ---- */
+    var steps = pi.steps.map(function (s, i) {
+      return '<div class="mkt-step mkt-reveal" data-d="' + ((i % 4) + 1) + '">' +
+        '<span class="mkt-step__n">' + (i + 1) + '</span>' +
+        '<div class="mkt-step__t">' + S.esc(s.t) + '</div>' +
+        '<p class="mkt-step__d">' + S.esc(s.d) + '</p>' +
+      '</div>';
+    }).join('');
+
+    /* ---- выгоды (emoji+заголовок+пояснение из benefits[]) ---- */
+    var benefitEmoji = ['📈', '🔒', '🧾', '🎈', '🛡️', '🔁'];
+    var benefits = pi.benefits.map(function (b, i) {
+      var parts = b.split(/:|—/);
+      var t = parts[0].trim();
+      var d = parts.slice(1).join('—').trim() || b;
+      var hasD = parts.length > 1;
+      return '<article class="pr-benefit mkt-reveal" data-d="' + ((i % 3) + 1) + '">' +
+        '<span class="pr-benefit__e" aria-hidden="true">' + (benefitEmoji[i] || '✨') + '</span>' +
+        '<div class="pr-benefit__t">' + S.esc(hasD ? t : b) + '</div>' +
+        (hasD ? '<p class="pr-benefit__d">' + S.esc(d) + '</p>' : '') +
+      '</article>';
+    }).join('');
+
+    /* ---- активные подрядчики (живые, status active) ---- */
+    var svcName = {};
+    (P.services || []).forEach(function (s) { svcName[s.id] = s.name; });
+    var activePartners = P.contractors.filter(function (c) { return c.status === 'active'; }).slice(0, 4);
+    var partnerCards = activePartners.map(function (c) {
+      return '<article class="pr-partner mkt-reveal">' +
+        '<div class="pr-partner__top">' +
+          '<span class="avatar avatar--plum">' + S.esc(S.initials(c.owner)) + '</span>' +
+          '<div>' +
+            '<div class="pr-partner__name">' + S.esc(c.name) + '</div>' +
+            '<div class="pr-partner__cat">' + S.esc(svcName[c.category] || c.category) + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="pr-partner__stats">' +
+          '<div class="pr-partner__stat"><span class="pr-partner__sv">' +
+            c.rating.toFixed(1).replace('.', ',') + '</span><span class="pr-partner__sl">★ рейтинг</span></div>' +
+          '<div class="pr-partner__stat"><span class="pr-partner__sv">' + c.orders +
+            '</span><span class="pr-partner__sl">заказов</span></div>' +
+          '<div class="pr-partner__stat"><span class="pr-partner__sv">' + c.sla +
+            '%</span><span class="pr-partner__sl">в срок</span></div>' +
+        '</div>' +
+      '</article>';
+    }).join('');
+
+    /* ---- отзыв подрядчика-перспективы: берём первый testimonial как «голос клиента,
+           который придёт к подрядчику». Имя/повод/дата — через orderById. ---- */
+    var t0 = P.testimonials[1];
+    var ord0 = S.orderById(t0.orderId);
+    var occ0 = ord0 ? S.occasionById(ord0.occasion) : null;
+
+    /* ---- категории для формы (из услуг-агрегатов + ядро) ---- */
+    var catOptions = (P.serviceCatalog || []).filter(function (s) {
+      return s.tag !== 'свой';
+    }).map(function (s) {
+      return '<option value="' + S.esc(s.slug) + '">' + S.esc(s.emoji + ' ' + s.name) + '</option>';
+    }).join('');
+
+    view.innerHTML =
+      /* ======= HERO ======= */
+      '<section class="mkt-hero"><div class="mkt-hero__inner">' +
+        '<div class="mkt-reveal">' +
+          '<div class="mkt-hero__kicker">Подрядчикам · комиссия ' + pi.commission + '% только с выполненных</div>' +
+          '<h1 class="mkt-hero__title">Заявки на праздники — <em>уже с клиентом и оплатой</em></h1>' +
+          '<p class="mkt-hero__lead">' + S.esc(pi.pitch) + '</p>' +
+          '<div class="mkt-hero__cta">' +
+            '<button class="btn btn--primary btn--lg" data-open="#join-modal">Стать подрядчиком</button>' +
+            '<a class="btn btn--ghost btn--lg" href="partner.html">Посмотреть кабинет подрядчика</a>' +
+          '</div>' +
+          '<div class="mkt-hero__trust">' +
+            '<span><strong>' + S.num(Number(pi.caseStat.value)) + '</strong>клиентов в базе</span>' +
+            '<span class="mkt-hero__sep" aria-hidden="true"></span>' +
+            '<span><strong>5,0</strong>рейтинг площадки</span>' +
+            '<span class="mkt-hero__sep" aria-hidden="true"></span>' +
+            '<span><strong>' + S.num(kpi.partiesDone) + '</strong>праздников собрано</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="mkt-hero__collage mkt-reveal" data-d="2">' + heroCollage + '</div>' +
+      '</div></section>' +
+
+      /* ======= КАК ЭТО РАБОТАЕТ (шаги) ======= */
+      '<section class="mkt-band"><div class="mkt-band__inner">' +
+        '<div class="mkt-band__head mkt-reveal">' +
+          '<div class="mkt-eyebrow">Как это работает</div>' +
+          '<h2 class="mkt-h2">От заявки до выплаты — четыре шага</h2>' +
+          '<p class="mkt-lead">Pinkshar берёт на себя поиск клиента, оплату, чек и поддержку. ' +
+            'Вы подключаетесь к готовому потоку заявок и делаете свою часть.</p>' +
+        '</div>' +
+        '<div class="mkt-steps">' + steps + '</div>' +
+      '</div></section>' +
+
+      /* ======= КОМИССИЯ 15% ПРОЗРАЧНО (калькулятор) ======= */
+      '<section class="mkt-band mkt-band--ghost"><div class="mkt-band__inner">' +
+        '<div class="pr-calc">' +
+          '<div class="mkt-reveal">' +
+            '<div class="mkt-eyebrow">Прозрачная комиссия</div>' +
+            '<h2 class="mkt-h2">Платите ' + pi.commission + '% только с выполненных заказов</h2>' +
+            '<p class="mkt-lead">Никакой платы за вход и абонентки. Клиент оплачивает заказ ' +
+              'Pinkshar, деньги ждут в эскроу, а после выполнения вы получаете свою часть ' +
+              'за вычетом комиссии. Выберите сумму заказа — посчитаем вашу выплату.</p>' +
+            '<div class="pr-calc__amounts" data-pr-amounts style="margin-top:var(--s-5)">' +
+              [12500, 18900, 32500, 64000].map(function (a, i) {
+                return '<button type="button" class="pr-amt' + (i === 1 ? ' active' : '') +
+                  '" data-amt="' + a + '">' + S.money(a) + '</button>';
+              }).join('') +
+            '</div>' +
+          '</div>' +
+          '<div class="pr-calc__visual mkt-reveal" data-d="2">' +
+            '<div class="pr-flow">' +
+              '<div class="pr-flow__row">' +
+                '<div><div class="pr-flow__k">Клиент оплачивает заказ</div>' +
+                  '<div class="pr-flow__sub">сумма уходит в эскроу Pinkshar</div></div>' +
+                '<div class="pr-flow__v" data-pr-total>—</div>' +
+              '</div>' +
+              '<div class="pr-flow__arrow" aria-hidden="true">↓</div>' +
+              '<div class="pr-flow__row pr-flow__row--commission">' +
+                '<div><div class="pr-flow__k">Комиссия Pinkshar · ' + pi.commission + '%</div>' +
+                  '<div class="pr-flow__sub">только с выполненного заказа</div></div>' +
+                '<div class="pr-flow__v" data-pr-fee>—</div>' +
+              '</div>' +
+              '<div class="pr-flow__arrow" aria-hidden="true">↓</div>' +
+              '<div class="pr-flow__row pr-flow__row--accent">' +
+                '<div><div class="pr-flow__k">Ваша выплата</div>' +
+                  '<div class="pr-flow__sub">после подтверждения выполнения</div></div>' +
+                '<div class="pr-flow__v" data-pr-payout>—</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div></section>' +
+
+      /* ======= ВЫГОДЫ ======= */
+      '<section class="mkt-band"><div class="mkt-band__inner">' +
+        '<div class="mkt-band__head mkt-reveal">' +
+          '<div class="mkt-eyebrow">Зачем подключаться</div>' +
+          '<h2 class="mkt-h2">Поток заявок, гарантия оплаты и витрина-профиль</h2>' +
+        '</div>' +
+        '<div class="pr-benefits">' + benefits + '</div>' +
+      '</div></section>' +
+
+      /* ======= МИНИ-КЕЙС / ЦИФРА (stats на розовом) ======= */
+      '<section class="mkt-ctaband"><div class="mkt-ctaband__inner" style="display:block">' +
+        '<div class="mkt-reveal" style="max-width:46ch;margin-bottom:var(--s-6)">' +
+          '<div class="mkt-eyebrow" style="color:rgba(255,255,255,.85)">Спрос уже есть</div>' +
+          '<h2 class="mkt-ctaband__title">' + S.num(Number(pi.caseStat.value)) +
+            ' тёплых клиентов ждут исполнителей</h2>' +
+          '<p class="mkt-ctaband__lead">' + S.esc(pi.caseStat.sub.charAt(0).toUpperCase() + pi.caseStat.sub.slice(1)) +
+            '. Вы выходите не на пустой рынок, а в работающую площадку.</p>' +
+        '</div>' +
+        '<div class="mkt-stats mkt-stats--onpink mkt-reveal" data-d="2">' +
+          '<div class="mkt-stat"><span class="mkt-stat__v">' + S.moneyShort(kpi.gmv) +
+            '</span><span class="mkt-stat__l">оборот площадки за период</span></div>' +
+          '<div class="mkt-stat"><span class="mkt-stat__v">' + S.money(kpi.avgCheck) +
+            '</span><span class="mkt-stat__l">средний чек заказа</span></div>' +
+          '<div class="mkt-stat"><span class="mkt-stat__v">' + kpi.attachRate +
+            '</span><span class="mkt-stat__l">услуги в одном заказе</span></div>' +
+          '<div class="mkt-stat"><span class="mkt-stat__v">' + S.moneyShort(kpi.escrowHeld) +
+            '</span><span class="mkt-stat__l">сейчас защищено в эскроу</span></div>' +
+        '</div>' +
+      '</div></section>' +
+
+      /* ======= УЖЕ С НАМИ (живые подрядчики) ======= */
+      '<section class="mkt-band mkt-band--ghost"><div class="mkt-band__inner">' +
+        '<div class="mkt-band__head mkt-reveal">' +
+          '<div class="mkt-eyebrow">Уже работают на площадке</div>' +
+          '<h2 class="mkt-h2">Студии, кондитеры и флористы рядом с вами</h2>' +
+          '<p class="mkt-lead">Подрядчики получают повод-центричные заказы и кросс-продажи: ' +
+            'клиент шаров тут же берёт торт, цветы и съёмку.</p>' +
+        '</div>' +
+        '<div class="pr-partners">' + partnerCards + '</div>' +
+      '</div></section>' +
+
+      /* ======= ГОЛОС РЫНКА (отзыв клиента) ======= */
+      '<section class="mkt-band"><div class="mkt-band__inner">' +
+        '<blockquote class="pr-quote mkt-reveal">' +
+          '<p class="pr-quote__text">«' + S.esc(t0.text) + '»</p>' +
+          '<div class="pr-quote__who">' +
+            '<strong>' + S.esc(ord0 ? ord0.client : 'Клиент Pinkshar') + '</strong>' +
+            (occ0 ? ' · ' + S.esc(occ0.name) : '') +
+            (ord0 ? ' · ' + S.esc(S.dateShort(ord0.date)) : '') +
+          '</div>' +
+        '</blockquote>' +
+      '</div></section>' +
+
+      /* ======= ДВУСТОРОННИЙ РАЗМАХ (twoside) ======= */
+      '<section class="mkt-band mkt-band--ghost"><div class="mkt-band__inner">' +
+        '<div class="mkt-band__head mkt-band__head--center mkt-reveal">' +
+          '<div class="mkt-eyebrow">Две стороны одной заявки</div>' +
+          '<h2 class="mkt-h2">Клиент собирает праздник — вы его исполняете</h2>' +
+          '<p class="mkt-lead">Одна площадка закрывает обе стороны: спрос приходит готовым, ' +
+            'предложение получает оплату в эскроу. Между вами — Pinkshar.</p>' +
+        '</div>' +
+        '<div class="mkt-twoside pr-twoside">' +
+          '<div class="mkt-side mkt-reveal">' +
+            '<div class="mkt-side__t">Клиенту</div>' +
+            '<p class="mkt-side__lead">Собирает весь праздник под повод одной заявкой ' +
+              'и одним чеком — без десятка подрядчиков и звонков.</p>' +
+            '<ul class="mkt-side__list">' +
+              '<li>Пакеты под повод: шары, торт, цветы, шоу</li>' +
+              '<li>Один чек и одна оплата за всё</li>' +
+              '<li>Эскроу-защита и возврат, если что-то не так</li>' +
+            '</ul>' +
+            '<div class="mkt-side__foot">' +
+              '<a class="btn btn--ghost" href="index.html">Смотреть витрину</a>' +
+            '</div>' +
+          '</div>' +
+          '<div class="pr-twoside__link mkt-reveal" aria-hidden="true">' +
+            '<span class="pr-twoside__node">' +
+              '<svg width="20" height="20" viewBox="0 0 20 20" fill="none">' +
+                '<path d="M6 7L3 10l3 3M14 7l3 3-3 3M3 10h14" stroke="currentColor" ' +
+                'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+            '</span>' +
+            '<span class="pr-twoside__cap">Pinkshar</span>' +
+          '</div>' +
+          '<div class="mkt-side mkt-side--accent mkt-reveal" data-d="2">' +
+            '<div class="mkt-side__t">Подрядчику</div>' +
+            '<p class="mkt-side__lead">Получает готовые заявки с клиентом, поводом ' +
+              'и оплатой в эскроу. Делает свою часть — остальное берёт платформа.</p>' +
+            '<ul class="mkt-side__list">' +
+              '<li>Поток повод-центричных заказов</li>' +
+              '<li>Оплата гарантирована эскроу</li>' +
+              '<li>Комиссия ' + pi.commission + '% только с выполненного</li>' +
+            '</ul>' +
+            '<div class="mkt-side__foot">' +
+              '<button class="btn btn--white" data-open="#join-modal">Стать подрядчиком</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div></section>' +
+
+      /* ======= FAQ ======= */
+      '<section class="mkt-band"><div class="mkt-band__inner">' +
+        '<div class="mkt-band__head mkt-band__head--center mkt-reveal">' +
+          '<div class="mkt-eyebrow">Частые вопросы</div>' +
+          '<h2 class="mkt-h2">Что важно знать подрядчику</h2>' +
+        '</div>' +
+        '<div class="mkt-faq mkt-reveal">' + faqMarkup() + '</div>' +
+      '</div></section>' +
+
+      /* ======= ФИНАЛЬНАЯ CTA ======= */
+      '<section class="mkt-ctaband"><div class="mkt-ctaband__inner">' +
+        '<div class="mkt-reveal">' +
+          '<h2 class="mkt-ctaband__title">Подключите свою студию к потоку заявок</h2>' +
+          '<p class="mkt-ctaband__lead">Без платы за вход. Модерация, готовый спрос ' +
+            'и оплата в эскроу — старт за один день.</p>' +
+        '</div>' +
+        '<div class="mkt-ctaband__cta mkt-reveal" data-d="2">' +
+          '<button class="btn btn--white btn--lg" data-open="#join-modal">Стать подрядчиком</button>' +
+          '<a class="btn btn--onpink-ghost btn--lg" href="partner.html">Демо-кабинет</a>' +
+        '</div>' +
+      '</div></section>' +
+
+      /* ======= МОДАЛКА «СТАТЬ ПОДРЯДЧИКОМ» ======= */
+      '<div class="modal" id="join-modal" role="dialog" aria-modal="true" aria-labelledby="join-title">' +
+        '<div class="modal__head">' +
+          '<h3 id="join-title" class="card__title">Стать подрядчиком Pinkshar</h3>' +
+          '<button class="icon-btn" type="button" data-close aria-label="Закрыть">' +
+            '<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="modal__body" data-join-body>' +
+          '<p class="muted measure" style="margin-bottom:var(--s-5)">Оставьте заявку — ' +
+            'свяжемся, проверим портфолио и подключим к каталогу. Комиссия ' + pi.commission +
+            '% только с выполненных заказов.</p>' +
+          '<form data-join-form novalidate>' +
+            '<div class="pr-form">' +
+              '<div class="field"><label for="jf-cat">Категория услуг</label>' +
+                '<select class="select" id="jf-cat" required>' + catOptions + '</select></div>' +
+              '<div class="field"><label for="jf-city">Город работы</label>' +
+                '<input class="input" id="jf-city" type="text" value="Москва" required></div>' +
+              '<div class="field field--full"><label for="jf-name">Название студии или имя</label>' +
+                '<input class="input" id="jf-name" type="text" placeholder="Например: Студия «Гелий»" required></div>' +
+              '<div class="field"><label for="jf-phone">Телефон</label>' +
+                '<input class="input" id="jf-phone" type="tel" placeholder="+7 ___ ___-__-__" required></div>' +
+              '<div class="field"><label for="jf-link">Профиль или портфолио</label>' +
+                '<input class="input" id="jf-link" type="text" placeholder="Сайт или соцсеть"></div>' +
+            '</div>' +
+            '<button class="btn btn--primary btn--block btn--lg" type="submit" style="margin-top:var(--s-3)">Отправить заявку</button>' +
+            '<p class="hint" style="text-align:center;margin-top:var(--s-3)">Это демо-прототип — заявка не уходит на реальный сервер.</p>' +
+          '</form>' +
+        '</div>' +
+      '</div>';
+
+    /* ---------- ИНТЕРАКТИВ ---------- */
+    // калькулятор комиссии
+    var amtBox = view.querySelector('[data-pr-amounts]');
+    var elTotal = view.querySelector('[data-pr-total]');
+    var elFee = view.querySelector('[data-pr-fee]');
+    var elPayout = view.querySelector('[data-pr-payout]');
+    function calc(amount) {
+      var fee = Math.round(amount * pi.commission / 100);
+      elTotal.textContent = S.money(amount);
+      elFee.textContent = '− ' + S.money(fee);
+      elPayout.textContent = S.money(amount - fee);
+    }
+    amtBox.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-amt]');
+      if (!btn) return;
+      amtBox.querySelectorAll('.pr-amt').forEach(function (b) { b.classList.toggle('active', b === btn); });
+      calc(Number(btn.getAttribute('data-amt')));
+    });
+    calc(18900);
+
+    // форма «стать подрядчиком» -> мок «заявка принята»
+    var joinBody = view.querySelector('[data-join-body]');
+    var joinForm = view.querySelector('[data-join-form]');
+    joinForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var name = (view.querySelector('#jf-name').value || '').trim();
+      var phone = (view.querySelector('#jf-phone').value || '').trim();
+      if (!name || !phone) {
+        if (!name) view.querySelector('#jf-name').focus();
+        else view.querySelector('#jf-phone').focus();
+        return;
+      }
+      var catSel = view.querySelector('#jf-cat');
+      var catName = catSel.options[catSel.selectedIndex].text;
+      joinBody.innerHTML =
+        '<div class="pr-ok">' +
+          '<div class="pr-ok__badge" aria-hidden="true">✓</div>' +
+          '<div class="empty__title">Заявка принята</div>' +
+          '<p class="muted measure" style="margin:0 auto var(--s-5)">' +
+            S.esc(name) + ', спасибо! Заявка по категории «' + S.esc(catName.replace(/^\S+\s/, '')) +
+            '» зарегистрирована. В реальной площадке мы свяжемся в течение дня, ' +
+            'проверим портфолио и подключим вас к каталогу.</p>' +
+          '<div class="mkt-ctaband__cta" style="justify-content:center">' +
+            '<a class="btn btn--primary" href="partner.html">Заглянуть в кабинет подрядчика</a>' +
+            '<button class="btn btn--ghost" type="button" data-close>Закрыть</button>' +
+          '</div>' +
+        '</div>';
+    });
+  };
+
+  /* FAQ-контент подрядчика (отдельная функция, чтобы не раздувать тело) */
+  function faqMarkup() {
+    var pi = window.PINK.partnerInfo, S = window.SHELL;
+    var items = [
+      { q: 'Есть ли плата за подключение или абонентка?',
+        a: 'Нет. Подключение бесплатное, абонентской платы нет. Pinkshar берёт ' + pi.commission +
+           '% комиссии только с фактически выполненных заказов.' },
+      { q: 'Когда и как я получаю деньги?',
+        a: 'Клиент оплачивает заказ платформе, сумма удерживается в эскроу. После того как вы ' +
+           'подтвердили выполнение, выплата приходит вам за вычетом ' + pi.commission + '% комиссии — прозрачно и в срок.' },
+      { q: 'Откуда берутся заказы?',
+        a: 'Из тёплой базы и повод-центричных заявок площадки. Клиент собирает праздник под повод, ' +
+           'а платформа направляет вашу часть заказа вам — искать клиента самим не нужно.' },
+      { q: 'Что если клиент откажется или подведёт?',
+        a: 'Пока заказ не подтверждён к работе, деньги придерживаются в эскроу. Условия отмены ' +
+           'и возврата прозрачны для обеих сторон, а ваш рейтинг защищён модерацией площадки.' },
+      { q: 'Кого вы берёте на площадку?',
+        a: 'Проверенных исполнителей по услугам праздника: десерты, цветы, фото и видео, шоу, ' +
+           'аниматоров, декор, кейтеринг и уборку. Проходим модерацию портфолио, чтобы держать рейтинг 5,0.' }
+    ];
+    return items.map(function (f) {
+      return '<div class="mkt-faq__item">' +
+        '<button class="mkt-faq__q" type="button">' + S.esc(f.q) +
+          '<span class="mkt-faq__icon" aria-hidden="true"></span></button>' +
+        '<div class="mkt-faq__a"><div class="mkt-faq__a-inner">' + S.esc(f.a) + '</div></div>' +
+      '</div>';
+    }).join('');
+  }
+  </script>
+
+  <footer data-mkt-footer></footer>
+
+  <script src="assets/data.js?v=8"></script>
+  <script src="assets/shell.js?v=8"></script>
+</body>
+</html>

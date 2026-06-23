@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Поводы — Pinkshar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="assets/app.css?v=8">
+  <style>
+    /* ===== page-scoped: страница повода (префикс .pv-) ===== */
+    .pv-occnote{margin-top:var(--s-5);font-size:13px;color:var(--muted)}
+    /* hero: переключатель повода (флагман выбран) */
+    .pv-switch{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:var(--s-5)}
+    .pv-switch a{font-size:13.5px;font-weight:600;padding:7px 14px;border-radius:var(--r-pill);
+      border:1px solid var(--line);background:var(--card);color:var(--muted);
+      transition:transform .14s ease,color .14s ease,border-color .14s ease}
+    .pv-switch a:hover{transform:translateY(-2px);color:var(--ink);border-color:var(--pink-soft)}
+    .pv-switch a.is-current{background:var(--pink-strong);color:#fff;border-color:var(--pink-strong)}
+    /* «что входит» — сетка пунктов с галочкой */
+    .pv-incl{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-4)}
+    .pv-incl__item{display:flex;gap:var(--s-3);align-items:flex-start;
+      background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
+      padding:var(--s-4) var(--s-5)}
+    .pv-incl__check{flex:none;width:30px;height:30px;border-radius:50%;
+      background:var(--pink-ghost);color:var(--pink-strong);font-weight:700;
+      display:flex;align-items:center;justify-content:center;font-size:15px}
+    .pv-incl__t{font-size:14.5px;line-height:1.45;font-weight:500}
+    /* услуги под повод — компактные карточки */
+    .pv-svcs{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-4)}
+    .pv-svc{display:flex;gap:var(--s-4);align-items:flex-start;background:var(--card);
+      border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--s-5);
+      transition:transform .14s ease,box-shadow .14s ease}
+    .pv-svc:hover{transform:translateY(-3px);box-shadow:var(--sh-pop)}
+    .pv-svc__emoji{flex:none;font-size:26px;line-height:1}
+    .pv-svc__name{font-weight:700;font-size:16px;margin-bottom:3px;display:flex;
+      align-items:center;gap:8px;flex-wrap:wrap}
+    .pv-svc__from{font-family:var(--font-mono);font-size:12px;color:var(--muted);font-weight:600}
+    .pv-svc__desc{font-size:13.5px;color:var(--muted);line-height:1.5;margin:0}
+    /* отзывы */
+    .pv-revs{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--s-4)}
+    .pv-rev{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+      padding:var(--s-6)}
+    .pv-rev__stars{color:var(--gold);font-size:15px;letter-spacing:2px;margin-bottom:var(--s-3)}
+    .pv-rev__text{font-size:16px;line-height:1.6;color:var(--ink);margin:0 0 var(--s-4);
+      font-family:var(--font-display);font-weight:500}
+    .pv-rev__by{display:flex;align-items:center;gap:12px}
+    .pv-rev__ava{flex:none;width:40px;height:40px;border-radius:50%;background:var(--pink-soft);
+      color:var(--plum);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
+    .pv-rev__name{font-weight:700;font-size:14px;line-height:1.2}
+    .pv-rev__meta{font-size:12.5px;color:var(--muted)}
+    /* плашка-тег пакета на медиа */
+    .pv-pkgtag{background:var(--pink-strong);color:#fff;font-size:11.5px;font-weight:700;
+      padding:4px 11px;border-radius:var(--r-pill);font-family:var(--font-mono);letter-spacing:.02em}
+    .pv-pkg-price{font-family:var(--font-mono);font-weight:700;font-size:24px;color:var(--ink)}
+    /* экономия на пакете со скидкой */
+    .pv-save{display:inline-flex;align-items:center;gap:5px;margin-left:auto;align-self:center;
+      background:var(--pink-ghost);color:var(--pink-strong);font-size:11.5px;font-weight:700;
+      font-family:var(--font-mono);padding:3px 9px;border-radius:var(--r-pill);white-space:nowrap}
+    /* рекомендованный пакет — мягкое выделение без перегруза */
+    .mkt-pkg.is-pick{border-color:var(--pink-strong);box-shadow:0 0 0 1px var(--pink-strong),var(--sh-pop)}
+    .pv-pickflag{position:absolute;right:12px;top:12px;z-index:2;
+      background:var(--plum);color:#fff;font-size:11px;font-weight:700;font-family:var(--font-mono);
+      letter-spacing:.02em;padding:4px 11px;border-radius:var(--r-pill)}
+    /* sticky-CTA снизу */
+    .pv-sticky{position:fixed;left:0;right:0;bottom:0;z-index:48;
+      background:rgba(255,255,255,.92);backdrop-filter:blur(10px);
+      border-top:1px solid var(--line);box-shadow:0 -6px 22px -14px rgba(28,20,24,.4);
+      transform:translateY(110%);transition:transform .28s cubic-bezier(.22,.61,.36,1)}
+    .pv-sticky.is-on{transform:translateY(0)}
+    .pv-sticky__inner{max-width:var(--maxw);margin:0 auto;padding:11px var(--s-5);
+      display:flex;align-items:center;gap:var(--s-4)}
+    .pv-sticky__txt{font-weight:600;font-size:14.5px}
+    .pv-sticky__txt b{font-family:var(--font-mono);color:var(--pink-strong)}
+    .pv-sticky__cta{margin-left:auto;display:flex;gap:10px}
+    /* другие поводы — компактная сетка ссылок */
+    .pv-others{display:grid;grid-template-columns:repeat(6,1fr);gap:var(--s-3)}
+    .pv-other{display:flex;flex-direction:column;gap:6px;align-items:flex-start;
+      background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
+      padding:var(--s-4);transition:transform .14s ease,border-color .14s ease}
+    .pv-other:hover{transform:translateY(-3px);border-color:var(--pink-soft)}
+    .pv-other__e{font-size:24px;line-height:1}
+    .pv-other__n{font-weight:600;font-size:13.5px;line-height:1.25;color:var(--ink)}
+    .pv-other__c{font-family:var(--font-mono);font-size:11.5px;color:var(--muted)}
+    @media (prefers-reduced-motion:reduce){.pv-sticky{transition:none}}
+    @media (max-width:980px){.pv-incl,.pv-svcs{grid-template-columns:repeat(2,1fr)}
+      .pv-others{grid-template-columns:repeat(3,1fr)}}
+    @media (max-width:760px){.pv-revs{grid-template-columns:1fr}}
+    @media (max-width:640px){.pv-incl,.pv-svcs{grid-template-columns:1fr}
+      .pv-others{grid-template-columns:repeat(2,1fr)}
+      .pv-sticky__txt{display:none}.pv-sticky__cta{margin-left:0;width:100%}
+      .pv-sticky__cta .btn{flex:1}}
+  </style>
+</head>
+<body>
+  <!-- общий демо-бар + маркетинг-хедер (рендерит shell.js → SHELL.mktHeader) -->
+  <div data-mkt-header></div>
+
+  <main id="view"><!-- наполняется window.renderPage() ниже --></main>
+
+  <!-- общий мега-футер (рендерит shell.js → SHELL.mktFooter) -->
+  <footer data-mkt-footer></footer>
+
+  <script src="assets/data.js?v=8"></script>
+  <script>
+  /* ============================================================
+     СТРАНИЦА ПОВОДА — флагман «День рождения».
+     renderPage() вызывается shell.js ПОСЛЕ загрузки data.js+shell.js,
+     поэтому к моменту вызова доступны window.PINK и window.SHELL.
+     После renderPage shell сам инициализирует reveal/faq/overlays.
+     ============================================================ */
+  window.renderPage = function () {
+    var P = window.PINK, S = window.SHELL;
+    var esc = S.esc, money = S.money;
+
+    // активный повод (флагман). Можно переопределить через ?o=vypiska|gender-pati
+    var OCC_KEYS = ['den-rozhdeniya', 'vypiska', 'gender-pati'];
+    var qp = new URLSearchParams(location.search).get('o');
+    var key = OCC_KEYS.indexOf(qp) >= 0 ? qp : 'den-rozhdeniya';
+    var d = P.occasionDetail[key];
+    var occ = S.occasionById(d.occasionId);
+    // минимальная цена пакета — нужна в hero, CTA-полосе и sticky
+    var ctaLow = d.packages.reduce(function (m, p) { return Math.min(m, p.price); }, Infinity);
+
+    // фото повода из галереи (по occasionId)
+    var occPhotos = P.gallery.filter(function (g) { return g.occasion === d.occasionId; });
+    function pickPhotos(n) {
+      var pool = occPhotos.length ? occPhotos.slice() : P.gallery.slice();
+      while (pool.length < n) pool = pool.concat(occPhotos.length ? occPhotos : P.gallery);
+      return pool.slice(0, n);
+    }
+    var heroPics = pickPhotos(3);
+
+    /* ---- HERO ---- */
+    var hero =
+      '<section class="mkt-hero">' +
+        '<div class="mkt-hero__inner">' +
+          '<div class="mkt-reveal">' +
+            '<nav class="mkt-breadcrumb" aria-label="Хлебные крошки">' +
+              '<a href="index.html">Главная</a><span class="mkt-breadcrumb__sep">/</span>' +
+              '<a href="povod.html">Поводы</a><span class="mkt-breadcrumb__sep">/</span>' +
+              '<span class="mkt-breadcrumb__cur">' + esc(occ.name) + '</span>' +
+            '</nav>' +
+            '<div class="pv-switch" role="tablist" aria-label="Выбор повода" style="margin-top:var(--s-5)">' +
+              OCC_KEYS.map(function (k) {
+                var od = P.occasionDetail[k], o = S.occasionById(od.occasionId);
+                var isCur = k === key;
+                var cur = isCur ? ' class="is-current" aria-current="page"' : '';
+                return '<a href="?o=' + k + '" role="tab" aria-selected="' + isCur + '"' + cur + '>' +
+                  o.emoji + ' ' + esc(o.name) + '</a>';
+              }).join('') +
+            '</div>' +
+            '<p class="mkt-hero__kicker">Флагман Pinkshar · ' + occ.count + ' праздников собрано · Москва</p>' +
+            '<h1 class="mkt-hero__title">' + esc(d.title).replace('под ключ', '<em>под ключ</em>') + '</h1>' +
+            '<p class="mkt-hero__lead">' + esc(d.lead) + '</p>' +
+            '<div class="mkt-hero__cta">' +
+              '<a class="btn btn--primary btn--lg" href="client.html">Собрать ' + esc(occ.name.toLowerCase()) + '</a>' +
+              '<a class="btn btn--ghost btn--lg" href="#pv-packages">Пакеты от ' + money(ctaLow) + '</a>' +
+            '</div>' +
+            '<div class="mkt-hero__trust">' +
+              '<span><strong>' + occ.count + '</strong>раз собрано</span>' +
+              '<span class="mkt-hero__sep"></span>' +
+              '<span><strong>5,0</strong>рейтинг · 173 оценки</span>' +
+              '<span class="mkt-hero__sep"></span>' +
+              '<span><strong>1</strong>чек · оплата в эскроу</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="mkt-hero__collage mkt-reveal" data-d="2">' +
+            heroPics.map(function (g) { return S.mktPhoto(g, true); }).join('') +
+          '</div>' +
+        '</div>' +
+      '</section>';
+
+    /* ---- ЧТО ВХОДИТ ---- */
+    var included =
+      '<section class="mkt-band">' +
+        '<div class="mkt-band__inner">' +
+          '<div class="mkt-band__head mkt-reveal">' +
+            '<p class="mkt-eyebrow">Всё в одной заявке</p>' +
+            '<h2 class="mkt-h2">Что входит в ' + esc(occ.name.toLowerCase()) + '</h2>' +
+            '<p class="mkt-lead">Собираем праздник целиком: вы выбираете масштаб, мы согласуем подрядчиков, оплату и сроки. Можно взять пакет — или добрать услуги поштучно.</p>' +
+          '</div>' +
+          '<div class="pv-incl mkt-reveal" data-d="1">' +
+            d.included.map(function (t) {
+              return '<div class="pv-incl__item"><span class="pv-incl__check">✓</span>' +
+                '<span class="pv-incl__t">' + esc(t) + '</span></div>';
+            }).join('') +
+          '</div>' +
+        '</div>' +
+      '</section>';
+
+    /* ---- ПАКЕТЫ (3) ---- */
+    var pkgMedia = pickPhotos(d.packages.length);
+    // один рекомендованный пакет на повод: приоритет «популярное» → «хит» → «новинка»
+    var pickOrder = ['популярное', 'хит', 'новинка'];
+    var pickIdx = -1;
+    pickOrder.some(function (t) {
+      var i = d.packages.findIndex(function (p) { return p.tag === t; });
+      if (i >= 0) { pickIdx = i; return true; }
+      return false;
+    });
+    var pkgs =
+      '<section class="mkt-band mkt-band--ghost" id="pv-packages">' +
+        '<div class="mkt-band__inner">' +
+          '<div class="mkt-band__head mkt-reveal">' +
+            '<p class="mkt-eyebrow">Готовые сценарии</p>' +
+            '<h2 class="mkt-h2">Три пакета: выбираете масштаб</h2>' +
+            '<p class="mkt-lead">От камерного формата до банкета с неоном и кейтерингом. Цена итоговая, без доплат за координацию — комиссия уже внутри.</p>' +
+          '</div>' +
+          '<div class="mkt-pkgs">' +
+            d.packages.map(function (p, i) {
+              var g = pkgMedia[i];
+              var media = S.mktPhoto({ src: g.src, label: '', emoji: p.emoji }, true, 'pv-pkgphoto');
+              var old = p.oldPrice ? '<span class="mkt-pkg__old">' + money(p.oldPrice) + '</span>' : '';
+              var save = p.oldPrice
+                ? '<span class="pv-save">−' + money(p.oldPrice - p.price) + '</span>' : '';
+              // ровно один рекомендованный пакет на повод
+              var isPick = i === pickIdx;
+              var flag = isPick ? '<span class="pv-pickflag">Чаще берут</span>' : '';
+              return '<article class="mkt-pkg mkt-reveal' + (isPick ? ' is-pick' : '') +
+                  '" data-d="' + (i + 1) + '" style="position:relative">' + flag +
+                '<div class="mkt-pkg__media">' + media +
+                  '<span class="mkt-pkg__tag pv-pkgtag">' + esc(p.tag) + '</span>' +
+                '</div>' +
+                '<div class="mkt-pkg__body">' +
+                  '<div class="mkt-pkg__occ">' + p.emoji + ' ' + esc(occ.name) + '</div>' +
+                  '<h3 class="mkt-pkg__name">' + esc(p.name) + '</h3>' +
+                  '<ul class="mkt-pkg__inc">' +
+                    p.items.map(function (it) {
+                      return '<li><span class="ie">•</span><span>' + esc(it) + '</span></li>';
+                    }).join('') +
+                  '</ul>' +
+                  '<div class="mkt-pkg__foot">' +
+                    '<div class="mkt-pkg__price">' +
+                      '<span class="pv-pkg-price">' + money(p.price) + '</span>' + old + save +
+                    '</div>' +
+                    '<a class="btn btn--primary btn--block" href="client.html">Оформить пакет</a>' +
+                  '</div>' +
+                '</div>' +
+              '</article>';
+            }).join('') +
+          '</div>' +
+          '<p class="pv-occnote mkt-reveal">Минимальный заказ — 3 500 ₽, доставка по Москве от 700 ₽. Оплата удерживается в эскроу до выполнения.</p>' +
+        '</div>' +
+      '</section>';
+
+    /* ---- УСЛУГИ ПОД ПОВОД ---- */
+    var svcCards = d.serviceSlugs.map(function (slug) {
+      return P.serviceCatalog.find(function (s) { return s.slug === slug; });
+    }).filter(Boolean);
+    function tagBadge(tag) {
+      if (tag === 'ядро') return '<span class="tag-core">ядро</span>';
+      if (tag === 'свой') return '<span class="badge badge--gold">свой</span>';
+      return '<span class="tag-agg">партнёр</span>';
+    }
+    var svcs =
+      '<section class="mkt-band">' +
+        '<div class="mkt-band__inner">' +
+          '<div class="mkt-band__head mkt-reveal">' +
+            '<p class="mkt-eyebrow">Каталог под повод</p>' +
+            '<h2 class="mkt-h2">Соберите свой набор услуг</h2>' +
+            '<p class="mkt-lead">Эти услуги чаще всего берут под ' + esc(occ.name.toLowerCase()) + '. Добавляйте по одной — всё попадёт в один заказ и один чек.</p>' +
+          '</div>' +
+          '<div class="pv-svcs">' +
+            svcCards.map(function (s, i) {
+              return '<article class="pv-svc mkt-reveal" data-d="' + ((i % 3) + 1) + '">' +
+                '<span class="pv-svc__emoji">' + s.emoji + '</span>' +
+                '<div>' +
+                  '<div class="pv-svc__name">' + esc(s.name) + ' ' + tagBadge(s.tag) + '</div>' +
+                  '<div class="pv-svc__from">от ' + money(s.priceFrom) + '</div>' +
+                  '<p class="pv-svc__desc" style="margin-top:6px">' + esc(s.desc) + '</p>' +
+                '</div>' +
+              '</article>';
+            }).join('') +
+          '</div>' +
+          '<div class="mkt-reveal" style="margin-top:var(--s-6)">' +
+            '<a class="btn btn--soft" href="uslugi.html">Все услуги Pinkshar →</a>' +
+          '</div>' +
+        '</div>' +
+      '</section>';
+
+    /* ---- LOOKBOOK ---- */
+    var lookPics = (occPhotos.length >= 6 ? occPhotos : occPhotos.concat(P.gallery)).slice(0, 8);
+    var lookbook =
+      '<section class="mkt-band mkt-band--ghost">' +
+        '<div class="mkt-band__inner">' +
+          '<div class="mkt-band__head mkt-reveal">' +
+            '<p class="mkt-eyebrow">Lookbook</p>' +
+            '<h2 class="mkt-h2">Как это выглядит вживую</h2>' +
+            '<p class="mkt-lead">Реальные работы под ' + esc(occ.name.toLowerCase()) + ' — оформление, фотозоны и наборы, которые мы уже собирали для клиентов.</p>' +
+          '</div>' +
+          '<div class="mkt-lookbook mkt-reveal" data-d="1">' +
+            lookPics.map(function (g) { return S.mktPhoto(g, true); }).join('') +
+          '</div>' +
+        '</div>' +
+      '</section>';
+
+    /* ---- ОТЗЫВЫ ---- */
+    var revOcc = P.testimonials.filter(function (t) {
+      var o = S.orderById(t.orderId);
+      return o && o.occasion === d.occasionId;
+    });
+    var revList = (revOcc.length ? revOcc : P.testimonials).slice(0, 4);
+    var reviews =
+      '<section class="mkt-band">' +
+        '<div class="mkt-band__inner">' +
+          '<div class="mkt-band__head mkt-reveal">' +
+            '<p class="mkt-eyebrow">Отзывы клиентов</p>' +
+            '<h2 class="mkt-h2">Рейтинг 5,0 — и это честно</h2>' +
+            '<p class="mkt-lead">173 оценки от тех, кто уже доверил Pinkshar свой праздник. Ни одной заявки без подтверждённого выполнения.</p>' +
+          '</div>' +
+          '<div class="pv-revs">' +
+            revList.map(function (t, i) {
+              var o = S.orderById(t.orderId) || {};
+              var occName = (S.occasionById(o.occasion) || {}).name || '';
+              return '<figure class="pv-rev mkt-reveal" data-d="' + ((i % 2) + 1) + '">' +
+                '<div class="pv-rev__stars" aria-label="Оценка ' + t.rating + ' из 5">' +
+                  Array(t.rating + 1).join('★') + '</div>' +
+                '<blockquote class="pv-rev__text">«' + esc(t.text) + '»</blockquote>' +
+                '<figcaption class="pv-rev__by">' +
+                  '<span class="pv-rev__ava">' + esc(S.initials(o.client || '')) + '</span>' +
+                  '<span>' +
+                    '<span class="pv-rev__name">' + esc(o.client || 'Клиент Pinkshar') + '</span><br>' +
+                    '<span class="pv-rev__meta">' + esc(occName) + ' · ' + S.dateShort(o.date) + '</span>' +
+                  '</span>' +
+                '</figcaption>' +
+              '</figure>';
+            }).join('') +
+          '</div>' +
+        '</div>' +
+      '</section>';
+
+    /* ---- FAQ ---- */
+    var faq =
+      '<section class="mkt-band mkt-band--ghost">' +
+        '<div class="mkt-band__inner">' +
+          '<div class="mkt-band__head mkt-band__head--center mkt-reveal">' +
+            '<p class="mkt-eyebrow">Частые вопросы</p>' +
+            '<h2 class="mkt-h2">Что важно знать</h2>' +
+          '</div>' +
+          '<div class="mkt-faq mkt-reveal">' +
+            d.faq.map(function (f) {
+              return '<div class="mkt-faq__item">' +
+                '<button class="mkt-faq__q" type="button">' + esc(f.q) +
+                  '<span class="mkt-faq__icon" aria-hidden="true"></span></button>' +
+                '<div class="mkt-faq__a"><div class="mkt-faq__a-inner">' + esc(f.a) + '</div></div>' +
+              '</div>';
+            }).join('') +
+          '</div>' +
+        '</div>' +
+      '</section>';
+
+    /* ---- CTA-полоса ---- */
+    var ctaBand =
+      '<section class="mkt-ctaband">' +
+        '<div class="mkt-ctaband__inner mkt-reveal">' +
+          '<div>' +
+            '<h2 class="mkt-ctaband__title">Соберём ваш ' + esc(occ.name.toLowerCase()) + ' за одну заявку</h2>' +
+            '<p class="mkt-ctaband__lead">От ' + money(ctaLow) + '. Шары, торт, цветы, съёмка и шоу — один чек, оплата в эскроу, забота Pinkshar.</p>' +
+          '</div>' +
+          '<div class="mkt-ctaband__cta">' +
+            '<a class="btn btn--white btn--lg" href="client.html">Собрать праздник</a>' +
+            '<a class="btn btn--onpink-ghost btn--lg" href="pakety.html">Все пакеты</a>' +
+          '</div>' +
+        '</div>' +
+      '</section>';
+
+    /* ---- ДРУГИЕ ПОВОДЫ ---- */
+    var others = P.occasions.filter(function (o) { return o.id !== d.occasionId; });
+    var otherOcc =
+      '<section class="mkt-band">' +
+        '<div class="mkt-band__inner">' +
+          '<div class="mkt-band__head mkt-reveal">' +
+            '<p class="mkt-eyebrow">Другие поводы</p>' +
+            '<h2 class="mkt-h2">Pinkshar собирает любой праздник</h2>' +
+          '</div>' +
+          '<div class="pv-others mkt-reveal" data-d="1">' +
+            others.map(function (o) {
+              // ведём на страницу повода: те, что детализированы — с ?o=, остальные на общий список
+              var detKey = { discharge: 'vypiska', gender: 'gender-pati' };
+              var href = detKey[o.id] ? 'povod.html?o=' + detKey[o.id] : 'pakety.html';
+              return '<a class="pv-other" href="' + href + '">' +
+                '<span class="pv-other__e">' + o.emoji + '</span>' +
+                '<span class="pv-other__n">' + esc(o.name) + '</span>' +
+                '<span class="pv-other__c">' + o.count + ' собрано</span>' +
+              '</a>';
+            }).join('') +
+          '</div>' +
+        '</div>' +
+      '</section>';
+
+    /* ---- STICKY-CTA ---- */
+    var sticky =
+      '<div class="pv-sticky" data-pv-sticky>' +
+        '<div class="pv-sticky__inner">' +
+          '<span class="pv-sticky__txt">' + occ.emoji + ' ' + esc(d.title) +
+            ' — от <b>' + money(ctaLow) + '</b></span>' +
+          '<span class="pv-sticky__cta">' +
+            '<a class="btn btn--ghost btn--sm" href="#pv-packages">Пакеты</a>' +
+            '<a class="btn btn--primary" href="client.html">Собрать ' + esc(occ.name.toLowerCase()) + '</a>' +
+          '</span>' +
+        '</div>' +
+      '</div>';
+
+    document.getElementById('view').innerHTML =
+      hero + included + pkgs + svcs + lookbook + reviews + faq + ctaBand + otherOcc + sticky;
+
+    /* sticky-CTA появляется после прокрутки за hero */
+    var bar = document.querySelector('[data-pv-sticky]');
+    var heroEl = document.querySelector('.mkt-hero');
+    if (bar && heroEl && 'IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (es) {
+        bar.classList.toggle('is-on', !es[0].isIntersecting);
+      }, { threshold: 0 });
+      io.observe(heroEl);
+    }
+  };
+  </script>
+  <script src="assets/shell.js?v=8"></script>
+</body>
+</html>

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>О платформе — Pinkshar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="assets/app.css?v=8">
+  <style>
+    /* page-scoped: страница «О платформе» (.op-*). Без переопределения общих токенов. */
+    .op-demand{display:grid;grid-template-columns:.82fr 1.18fr;gap:var(--s-7);align-items:center}
+    .op-demand__chart{background:var(--card);border:1px solid var(--line);
+      border-radius:var(--r-lg);box-shadow:var(--sh-card);padding:var(--s-5)}
+    .op-demand__chart-head{display:flex;align-items:baseline;justify-content:space-between;
+      gap:var(--s-4);margin-bottom:var(--s-4);flex-wrap:wrap}
+    .op-demand__chart-title{font-weight:700;font-size:15px}
+    .op-demand__chart-sub{font-family:var(--font-mono);font-size:12.5px;color:var(--muted)}
+    .op-chart{width:100%;height:230px}
+    /* 3-сторонняя модель */
+    .op-sides{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-4);align-items:stretch}
+    .op-side{display:flex;flex-direction:column;gap:var(--s-3);background:var(--card);
+      border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-card);
+      padding:var(--s-6);transition:transform .14s ease,box-shadow .14s ease}
+    .op-side:hover{transform:translateY(-4px);box-shadow:var(--sh-pop)}
+    .op-side__role{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;
+      font-family:var(--font-mono);font-size:12px;font-weight:600;letter-spacing:.02em;
+      color:var(--pink-strong);background:var(--pink-ghost);padding:5px 12px;
+      border-radius:var(--r-pill)}
+    .op-side__t{font-family:var(--font-display);font-size:23px;font-weight:700;line-height:1.12;
+      margin:0}
+    .op-side__lead{font-size:14px;color:var(--muted);line-height:1.55;margin:0}
+    .op-side__list{display:flex;flex-direction:column;gap:10px;margin:0 0 var(--s-2)}
+    .op-side__list li{display:flex;gap:10px;font-size:14px;line-height:1.45;align-items:flex-start}
+    .op-side__list li::before{content:"✓";font-weight:700;color:var(--pink-strong);flex:none}
+    .op-side__foot{margin-top:auto}
+    /* «почему сейчас» — рыночный блок */
+    .op-now{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-5)}
+    .op-now__item{display:flex;flex-direction:column;gap:var(--s-2)}
+    .op-now__v{font-family:var(--font-mono);font-weight:600;font-size:clamp(28px,3.4vw,40px);
+      line-height:1;letter-spacing:-.02em;color:var(--plum);font-variant-numeric:tabular-nums}
+    .op-now__t{font-weight:700;font-size:16px}
+    .op-now__d{font-size:14px;color:var(--muted);line-height:1.55;margin:0}
+    /* roadmap timeline-усиление */
+    .op-roadmap-rail{position:relative;margin-bottom:var(--s-6);height:2px;
+      background:linear-gradient(90deg,var(--pink) 0%,var(--pink-soft) 100%)}
+    .op-roadmap-rail span{position:absolute;top:50%;width:11px;height:11px;border-radius:50%;
+      background:var(--card);border:2px solid var(--pink);transform:translate(-50%,-50%)}
+    .op-roadmap-rail span:nth-child(1){left:12.5%}
+    .op-roadmap-rail span:nth-child(2){left:37.5%}
+    .op-roadmap-rail span:nth-child(3){left:62.5%}
+    .op-roadmap-rail span:nth-child(4){left:87.5%}
+    /* «сейчас» — пульсирующая первая точка, задаёт ритм движения */
+    .op-roadmap-rail span:nth-child(1){background:var(--pink);
+      box-shadow:0 0 0 0 var(--pink-soft);animation:op-pulse 2.4s ease-out infinite}
+    @keyframes op-pulse{0%{box-shadow:0 0 0 0 rgba(229,20,125,.45)}
+      70%{box-shadow:0 0 0 9px rgba(229,20,125,0)}100%{box-shadow:0 0 0 0 rgba(229,20,125,0)}}
+    @media (prefers-reduced-motion:reduce){.op-roadmap-rail span:nth-child(1){animation:none}}
+    .op-vision-collage{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-3)}
+    .op-vision-collage .mkt-photo{border-radius:var(--r-lg);box-shadow:var(--sh-card);
+      aspect-ratio:1/1}
+    .op-vision-collage .mkt-photo:nth-child(1){aspect-ratio:1/1.25}
+    .op-vision-collage .mkt-photo:nth-child(4){aspect-ratio:1/1.25}
+    @media (max-width:1000px){
+      .op-demand{grid-template-columns:1fr;gap:var(--s-6)}
+      .op-sides,.op-now{grid-template-columns:1fr}
+      .op-roadmap-rail{display:none}
+    }
+    @media (max-width:640px){
+      .op-vision-collage{max-width:420px}
+    }
+  </style>
+</head>
+<body>
+  <div data-mkt-header></div>
+
+  <main id="view"></main>
+
+  <footer data-mkt-footer></footer>
+
+  <!-- ECharts для графиков видения/динамики -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+  <script src="assets/data.js?v=8"></script>
+  <script>
+  /* ============================================================
+     o-platforme.html — страница видения. Контент из window.PINK.vision
+     + platformKPI + timeseries. Рендерит в <main id="view">.
+     shell.js вызывает window.renderPage() после init, затем
+     initReveal/initFaq подхватывают .mkt-reveal / .mkt-faq.
+     ============================================================ */
+  window.renderPage = function () {
+    var P = window.PINK || {};
+    var S = window.SHELL || {};
+    var V = P.vision || {};
+    var K = P.platformKPI || {};
+    var esc = S.esc || function (x) { return x; };
+    var g = P.gallery || [];
+
+    // helper: подобрать фото повода для коллажей
+    function photoBy(occ, zoom) {
+      var item = g.find(function (x) { return x.occasion === occ; }) || g[0] || {};
+      return S.mktPhoto ? S.mktPhoto(item, zoom !== false) : '';
+    }
+
+    // --- HERO (манифест + demand-trust + фото-коллаж)
+    var heroCollage =
+      '<div class="op-vision-collage">' +
+        photoBy('discharge') + photoBy('birthday') +
+        photoBy('hen') + photoBy('jubilee') +
+      '</div>';
+
+    var hero =
+      '<section class="mkt-hero">' +
+        '<div class="mkt-hero__inner">' +
+          '<div class="mkt-reveal">' +
+            '<p class="mkt-hero__kicker">О платформе · куда мы целимся</p>' +
+            '<h1 class="mkt-hero__title">Из магазина шаров — в <em>платформу праздника</em></h1>' +
+            '<p class="mkt-hero__lead">Клиент думает не «купить шары», а «собрать день рождения». ' +
+              'Мы превращаем повод в одну заявку: шары, десерты, цветы, съёмка и шоу — ' +
+              'один чек, одна забота, оплата в эскроу до выполнения.</p>' +
+            '<div class="mkt-hero__cta">' +
+              '<a class="btn btn--primary btn--lg" href="client.html">Собрать праздник</a>' +
+              '<a class="btn btn--ghost btn--lg" href="pakety.html">Смотреть пакеты</a>' +
+            '</div>' +
+            '<div class="mkt-hero__trust">' +
+              '<span><strong>5,0</strong>рейтинг · 173 оценки</span>' +
+              '<span class="mkt-hero__sep"></span>' +
+              '<span><strong>738</strong>праздников собрано</span>' +
+              '<span class="mkt-hero__sep"></span>' +
+              '<span><strong>785</strong>клиентов в базе</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="mkt-reveal" data-d="2">' + heroCollage + '</div>' +
+        '</div>' +
+      '</section>';
+
+    // --- МАНИФЕСТ-полоса
+    var manifesto =
+      '<section class="mkt-band mkt-band--ghost">' +
+        '<div class="mkt-band__inner">' +
+          '<div class="mkt-vision">' +
+            '<div class="mkt-reveal mkt-manifesto">' +
+              '<p class="mkt-manifesto__text">' + (V.manifesto || '') + '</p>' +
+            '</div>' +
+            '<div class="mkt-reveal mkt-vision__why" data-d="2">' +
+              (V.why || []).map(function (w, i) {
+                return '<div class="mkt-why">' +
+                  '<span class="mkt-why__num">0' + (i + 1) + '</span>' +
+                  '<div><div class="mkt-why__t">' + esc(w.t) + '</div>' +
+                  '<p class="mkt-why__d">' + esc(w.d) + '</p></div>' +
+                '</div>';
+              }).join('') +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</section>';
+
+    // --- DEMAND-FIRST: крупные цифры + спарклайн динамики GMV
+    var statCards = (V.stats || []).map(function (s, i) {
+      return '<div class="mkt-stat mkt-reveal" data-d="' + ((i % 4) + 1) + '">' +
+        '<span class="mkt-stat__v">' + esc(s.kpi) + '</span>' +
+        '<span class="mkt-stat__l">' + esc(s.label) + '</span>' +
+      '</div>';
+    }).join('') ||
+      '<div class="mkt-stat"><span class="mkt-stat__v">738</span>' +
+      '<span class="mkt-stat__l">праздников уже собрано</span></div>';
+
+    var gmvDelta = (K.deltas && K.deltas.gmv) || '+18%';
+    var demand =
+      '<section class="mkt-band">' +
+        '<div class="mkt-band__inner">' +
+          '<div class="mkt-band__head mkt-reveal">' +
+            '<p class="mkt-eyebrow">Фора, которой нет у конкурентов</p>' +
+            '<h2 class="mkt-h2">Спрос уже есть — мы расширяем то, что работает</h2>' +
+            '<p class="mkt-lead">Pinkshar вырос из живого магазина шаров. Тёплая база, ' +
+              'рейтинг 5,0 и сотни собранных праздников — это старт не с нуля, а с разгона.</p>' +
+          '</div>' +
+          '<div class="mkt-stats" style="margin-bottom:var(--s-7)">' + statCards + '</div>' +
+          '<div class="op-demand">' +
+            '<div class="mkt-reveal">' +
+              '<h3 style="font-family:var(--font-display);font-size:26px;margin-bottom:var(--s-3)">' +
+                'Оборот растёт ' + esc(gmvDelta) + ' к прошлому периоду</h3>' +
+              '<p class="mkt-lead">Каждый повод приносит больше одного чека: к ядру-шарам ' +
+                'добавляются десерты, цветы и съёмка. Средний чек — ' +
+                (S.money ? S.money(K.avgCheck) : K.avgCheck) + ', в заказе ' +
+                'в среднем ' + (K.attachRate || '2,8') + ' услуги.</p>' +
+              '<a class="btn btn--soft" href="platform.html">Открыть аналитику площадки</a>' +
+            '</div>' +
+            '<div class="op-demand__chart mkt-reveal" data-d="2">' +
+              '<div class="op-demand__chart-head">' +
+                '<span class="op-demand__chart-title">GMV по дням, июнь 2026</span>' +
+                '<span class="op-demand__chart-sub">' +
+                  (S.moneyShort ? S.moneyShort(K.gmv) : K.gmv) + ' за период</span>' +
+              '</div>' +
+              '<div id="op-gmv-chart" class="op-chart"></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</section>';
+
+    // --- КАРТА ЭКОСИСТЕМЫ (повод-ядро + сателлиты-услуги)
+    var sats = (P.serviceCatalog || []).filter(function (s) { return s.slug !== 'balloons'; })
+      .slice(0, 10).map(function (s) {
+        return '<div class="mkt-eco__sat">' +
+          '<span class="se">' + esc(s.emoji) + '</span>' +
+          '<span class="sn">' + esc(s.name) + '</span>' +
+          '<span class="st">' + esc(s.tag) + ' · от ' + (S.num ? S.num(s.priceFrom) : s.priceFrom) + ' ₽</span>' +
+        '</div>';
+      }).join('');
+
+    var eco =
+      '<section class="mkt-band mkt-band--ghost">' +
+        '<div class="mkt-band__inner">' +
+          '<div class="mkt-band__head mkt-band__head--center mkt-reveal">' +
+            '<p class="mkt-eyebrow">Экосистема праздника</p>' +
+            '<h2 class="mkt-h2">Повод в центре — услуги вокруг</h2>' +
+            '<p class="mkt-lead" style="margin:0 auto">Шары и оформление — наше ядро. ' +
+              'Вокруг него нанизываются проверенные подрядчики: каждый заказ становится ' +
+              'больше, чем просто шары.</p>' +
+          '</div>' +
+          '<div class="mkt-eco mkt-reveal" data-d="2">' +
+            '<div class="mkt-eco__core">' +
+              '<span class="mkt-eco__pill">ЯДРО PINKSHAR</span>' +
+              '<span class="mkt-eco__emoji">🎈</span>' +
+              '<h3>Шары и оформление</h3>' +
+              '<p>Собственное производство: гирлянды, цифры, фонтаны, арки и фотозоны под ' +
+                'цвет повода. Точка входа, к которой клиент возвращается за всем остальным.</p>' +
+            '</div>' + sats +
+          '</div>' +
+        '</div>' +
+      '</section>';
+
+    // --- 3-СТОРОННЯЯ МОДЕЛЬ
+    var sides = [
+      { role: '🩷 Клиент', href: 'client.html', cta: 'Войти как клиент',
+        t: 'Один чек на весь праздник',
+        lead: 'Выбирает повод — получает готовый сценарий и собирает всё одной заявкой.',
+        list: ['Пакеты под повод, без поиска десятка подрядчиков',
+          'Оплата защищена эскроу до выполнения',
+          'Один чат, один чек, одна дата'] },
+      { role: '🎈 Подрядчик', href: 'partner.html', cta: 'Войти как подрядчик',
+        t: 'Готовый спрос и гарантия оплаты',
+        lead: 'Платформа приводит клиента с поводом и датой — исполнитель делает свою часть.',
+        list: ['Заказы из тёплой базы, без затрат на привлечение',
+          'Деньги в эскроу — без риска неоплаты',
+          'Комиссия 15% только с выполненных заказов'] },
+      { role: '✨ Платформа', href: 'platform.html', cta: 'Открыть кабинет площадки',
+        t: 'Гарант сделки и точка роста',
+        lead: 'Собирает оплату, держит эскроу, удерживает комиссию и платит подрядчику.',
+        list: ['Эскроу как доверие между сторонами',
+          'Модерация защищает рейтинг 5,0',
+          'Кросс-продажи растят средний чек'] }
+    ];
+    var sidesHtml = sides.map(function (s, i) {
+      return '<div class="op-side mkt-reveal" data-d="' + (i + 1) + '">' +
+        '<span class="op-side__role">' + esc(s.role) + '</span>' +
+        '<h3 class="op-side__t">' + esc(s.t) + '</h3>' +
+        '<p class="op-side__lead">' + esc(s.lead) + '</p>' +
+        '<ul class="op-side__list">' +
+          s.list.map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('') +
+        '</ul>' +
+        '<div class="op-side__foot">' +
+          '<a class="btn btn--ghost btn--block" href="' + s.href + '">' + esc(s.cta) + '</a>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    var model =
+      '<section class="mkt-band">' +
+        '<div class="mkt-band__inner">' +
+          '<div class="mkt-band__head mkt-reveal">' +
+            '<p class="mkt-eyebrow">Как устроена сделка</p>' +
+            '<h2 class="mkt-h2">Три стороны — одна выгода для каждой</h2>' +
+            '<p class="mkt-lead">Клиент, подрядчик и платформа: посмотрите, что получает ' +
+              'каждый. Любую роль можно открыть в демо-кабинете.</p>' +
+          '</div>' +
+          '<div class="op-sides">' + sidesHtml + '</div>' +
+        '</div>' +
+      '</section>';
+
+    // --- ДОРОЖНАЯ КАРТА
+    var phases = (V.roadmap || []).map(function (ph, i) {
+      var now = i === 0 ? ' mkt-phase--now' : '';
+      return '<div class="mkt-phase' + now + ' mkt-reveal" data-d="' + (i + 1) + '">' +
+        '<div class="mkt-phase__tag">' + esc(ph.phase) + '</div>' +
+        '<div class="mkt-phase__t">' + esc(ph.title) + '</div>' +
+        '<ul class="mkt-phase__items">' +
+          (ph.items || []).map(function (it) { return '<li>' + esc(it) + '</li>'; }).join('') +
+        '</ul>' +
+      '</div>';
+    }).join('');
+
+    var roadmap =
+      '<section class="mkt-band mkt-band--ghost">' +
+        '<div class="mkt-band__inner">' +
+          '<div class="mkt-band__head mkt-reveal">' +
+            '<p class="mkt-eyebrow">Куда мы целимся</p>' +
+            '<h2 class="mkt-h2">Дорожная карта: от каркаса к масштабу</h2>' +
+            '<p class="mkt-lead">Мы строим категорию шаг за шагом — от пилота с эскроу ' +
+              'до онлайн-брони, квиз-подборщика и B2B.</p>' +
+          '</div>' +
+          '<div class="op-roadmap-rail mkt-reveal" aria-hidden="true">' +
+            '<span></span><span></span><span></span><span></span></div>' +
+          '<div class="mkt-roadmap">' + phases + '</div>' +
+        '</div>' +
+      '</section>';
+
+    // --- ПОЧЕМУ СЕЙЧАС (рынок/тренд)
+    var nowItems = [
+      { v: '785', t: 'База, а не нулевой старт',
+        d: 'Тёплые клиенты и рейтинг 5,0 уже в руках — спрос подтверждён, его остаётся расширить.' },
+      { v: '×2,8', t: 'Услуг в одном заказе',
+        d: 'Клиент думает поводом, а не товаром. Один повод естественно тянет за собой ' +
+           'несколько услуг — и больше одного чека.' },
+      { v: '15%', t: 'Прозрачная экономика',
+        d: 'Комиссия только с выполненных заказов и эскроу-гарантия делают модель ' +
+           'понятной клиенту и выгодной подрядчику.' }
+    ];
+    var nowHtml = nowItems.map(function (n, i) {
+      return '<div class="op-now__item mkt-reveal" data-d="' + (i + 1) + '">' +
+        '<span class="op-now__v">' + esc(n.v) + '</span>' +
+        '<div class="op-now__t">' + esc(n.t) + '</div>' +
+        '<p class="op-now__d">' + esc(n.d) + '</p>' +
+      '</div>';
+    }).join('');
+
+    var whyNow =
+      '<section class="mkt-band">' +
+        '<div class="mkt-band__inner">' +
+          '<div class="mkt-band__head mkt-reveal">' +
+            '<p class="mkt-eyebrow">Почему сейчас</p>' +
+            '<h2 class="mkt-h2">Момент, когда из магазина рождается платформа</h2>' +
+          '</div>' +
+          '<div class="op-now">' + nowHtml + '</div>' +
+        '</div>' +
+      '</section>';
+
+    // --- ФИНАЛЬНЫЙ CTA
+    var cta =
+      '<section class="mkt-ctaband">' +
+        '<div class="mkt-ctaband__inner">' +
+          '<div class="mkt-reveal">' +
+            '<h2 class="mkt-ctaband__title">Соберите праздник целиком — в одной заявке</h2>' +
+            '<p class="mkt-ctaband__lead">Выберите повод, а шары, десерты, цветы и съёмку ' +
+              'мы соберём под него. Оплата защищена до выполнения.</p>' +
+          '</div>' +
+          '<div class="mkt-ctaband__cta mkt-reveal" data-d="2">' +
+            '<a class="btn btn--white btn--lg" href="client.html">Собрать праздник</a>' +
+            '<a class="btn btn--onpink-ghost btn--lg" href="partneram.html">Стать подрядчиком</a>' +
+          '</div>' +
+        '</div>' +
+      '</section>';
+
+    document.getElementById('view').innerHTML =
+      hero + manifesto + demand + eco + model + roadmap + whyNow + cta;
+
+    // --- ECharts: спарклайн динамики GMV (анимируется при появлении)
+    renderGmvChart();
+  };
+
+  /* ECharts area-chart GMV. Рисуем когда блок попал во вьюпорт —
+     анимация ECharts (рост area) + reveal-fade. Уважает reduced-motion. */
+  function renderGmvChart() {
+    var el = document.getElementById('op-gmv-chart');
+    if (!el || typeof echarts === 'undefined') return;
+    var P = window.PINK || {};
+    var ts = (P.timeseries && P.timeseries.gmvByDay) || {};
+    var labels = ts.labels || [];
+    var data = ts.gmv || [];
+    var reduce = window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function draw() {
+      var chart = echarts.init(el, null, { renderer: 'svg' });
+      chart.setOption({
+        animation: !reduce,
+        animationDuration: 900,
+        animationEasing: 'cubicOut',
+        grid: { left: 6, right: 10, top: 16, bottom: 22, containLabel: true },
+        tooltip: {
+          trigger: 'axis',
+          backgroundColor: '#1C1418',
+          borderWidth: 0,
+          textStyle: { color: '#fff', fontSize: 12, fontFamily: 'IBM Plex Mono' },
+          formatter: function (p) {
+            var v = p[0].value;
+            return p[0].axisValue + ' июня · ' +
+              v.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ₽';
+          }
+        },
+        xAxis: {
+          type: 'category', data: labels, boundaryGap: false,
+          axisLine: { lineStyle: { color: '#ECE3E8' } },
+          axisTick: { show: false },
+          axisLabel: { color: '#6B5E64', fontSize: 11, fontFamily: 'IBM Plex Mono' }
+        },
+        yAxis: {
+          type: 'value',
+          splitLine: { lineStyle: { color: '#F1E8ED' } },
+          axisLabel: {
+            color: '#6B5E64', fontSize: 11, fontFamily: 'IBM Plex Mono',
+            formatter: function (v) { return (v / 1000) + 'k'; }
+          }
+        },
+        series: [{
+          type: 'line', data: data, smooth: true, symbol: 'circle',
+          symbolSize: 6, showSymbol: false,
+          lineStyle: { color: '#E5147D', width: 2.5 },
+          itemStyle: { color: '#C70F6B' },
+          areaStyle: {
+            color: {
+              type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(229,20,125,.28)' },
+                { offset: 1, color: 'rgba(229,20,125,.02)' }
+              ]
+            }
+          }
+        }]
+      });
+      window.addEventListener('resize', function () { chart.resize(); });
+    }
+
+    if ('IntersectionObserver' in window && !reduce) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) { draw(); io.disconnect(); }
+        });
+      }, { threshold: 0.2 });
+      io.observe(el);
+    } else {
+      draw();
+    }
+  }
+  </script>
+  <script src="assets/shell.js?v=8"></script>
+</body>
+</html>

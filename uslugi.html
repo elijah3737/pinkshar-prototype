@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Услуги — Pinkshar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="assets/app.css?v=8">
+  <style>
+    /* ============================================================
+       page-scoped: «Услуги». Префикс .usl-* — без переопределения
+       общих токенов. Два режима: индекс 11 категорий (.usl-cat)
+       и листинг товаров (использует общие .listing/.facet/.prod-card).
+       ============================================================ */
+
+    /* ---------- ИНДЕКС: крупные карточки-категории (ссылка целиком) ---------- */
+    .usl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-4)}
+    .usl-cat{display:flex;flex-direction:column;background:var(--card);text-decoration:none;
+      color:inherit;border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;
+      box-shadow:var(--sh-card);transition:transform .18s ease,box-shadow .18s ease}
+    .usl-cat:hover{transform:translateY(-4px);box-shadow:var(--sh-pop)}
+    .usl-cat:focus-visible{outline:2px solid var(--pink-strong);outline-offset:2px}
+    .usl-cat__top{display:flex;align-items:flex-start;justify-content:space-between;
+      gap:var(--s-3);padding:var(--s-5) var(--s-5) 0}
+    .usl-cat__emoji{font-size:30px;line-height:1;width:54px;height:54px;flex:none;
+      display:flex;align-items:center;justify-content:center;border-radius:var(--r-md);
+      background:linear-gradient(135deg,var(--pink-soft),var(--pink-ghost))}
+    .usl-cat__n{font-family:var(--font-mono);font-size:12px;color:var(--muted);
+      background:var(--pink-ghost);border-radius:var(--r-pill);padding:5px 11px;flex:none;
+      align-self:flex-start}
+    .usl-cat__body{display:flex;flex-direction:column;flex:1;padding:var(--s-4) var(--s-5) var(--s-5)}
+    .usl-cat__name{font-family:var(--font-display);font-size:21px;font-weight:700;
+      line-height:1.15;margin-bottom:8px}
+    .usl-cat__desc{font-size:13.5px;color:var(--muted);line-height:1.55;margin:0 0 var(--s-5);flex:1}
+    .usl-cat__foot{margin-top:auto;display:flex;align-items:center;
+      justify-content:space-between;gap:var(--s-3);padding-top:var(--s-4);
+      border-top:1px solid var(--line)}
+    .usl-cat__price{font-family:var(--font-mono);font-weight:600;font-size:17px;color:var(--plum)}
+    .usl-cat__price .usl-from{font-family:var(--font-display);font-size:12.5px;
+      font-weight:400;color:var(--muted);margin-right:5px}
+    .usl-cat__go{font-size:13px;font-weight:600;color:var(--pink-strong);
+      display:inline-flex;align-items:center;gap:5px}
+    .usl-cat__go svg{transition:transform .18s ease}
+    .usl-cat:hover .usl-cat__go svg{transform:translateX(3px)}
+    /* метка ядра у первой категории */
+    .usl-cat__core{position:absolute;left:10px;top:10px}
+    .usl-cat__media{position:relative;aspect-ratio:16/9;overflow:hidden;
+      background:linear-gradient(135deg,var(--pink-soft),var(--pink-ghost))}
+
+    /* ---------- ЛИСТИНГ: категория-хедер + «В корзину» на карточке ---------- */
+    .usl-cathead{padding-top:var(--s-2)}
+    .usl-cathead__row{display:flex;align-items:center;gap:var(--s-4)}
+    .usl-cathead__emoji{font-size:34px;line-height:1;width:60px;height:60px;flex:none;
+      display:flex;align-items:center;justify-content:center;border-radius:var(--r-md);
+      background:linear-gradient(135deg,var(--pink-soft),var(--pink-ghost))}
+    .usl-cathead h1{font-family:var(--font-display);font-size:clamp(26px,3.2vw,36px);
+      font-weight:700;line-height:1.08;margin:0}
+    .usl-cathead__desc{font-size:15px;color:var(--muted);line-height:1.55;
+      max-width:60ch;margin:var(--s-3) 0 0}
+
+    /* «В корзину» внутри .prod-card — кнопка не должна триггерить переход карточки */
+    .prod-card__cart{flex:none;width:40px;height:40px;border-radius:var(--r-md);
+      border:1px solid var(--line);background:var(--card);color:var(--plum);
+      display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+      transition:background .14s ease,border-color .14s ease,transform .12s ease}
+    .prod-card__cart:hover{background:var(--pink-strong);border-color:var(--pink-strong);color:#fff}
+    .prod-card__cart:active{transform:scale(.92)}
+    .prod-card__cart.is-added{background:var(--pink-soft);border-color:var(--pink-soft);color:var(--plum)}
+
+    /* пустой результат фасетов */
+    .usl-empty{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;
+      text-align:center;padding:var(--s-8) var(--s-5);gap:var(--s-2)}
+    .usl-empty[hidden]{display:none}
+    .usl-empty__icon{font-size:40px;line-height:1;margin-bottom:var(--s-2);opacity:.85}
+    .usl-empty__title{font-family:var(--font-display);font-size:20px;font-weight:700;margin:0}
+    .usl-empty__text{font-size:14.5px;color:var(--muted);max-width:42ch;margin:0 0 var(--s-3)}
+
+    /* блок «размах ассортимента» на индексе */
+    .usl-scale{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s-4)}
+    .usl-scale__cell{background:var(--card);border:1px solid var(--line);
+      border-radius:var(--r-lg);padding:var(--s-5)}
+    .usl-scale__v{font-family:var(--font-mono);font-weight:600;font-size:clamp(28px,3.4vw,38px);
+      color:var(--plum);line-height:1}
+    .usl-scale__l{font-size:13.5px;color:var(--muted);line-height:1.45;margin-top:8px}
+
+    @media (max-width:980px){
+      .usl-grid{grid-template-columns:repeat(2,1fr)}
+      .usl-scale{grid-template-columns:repeat(2,1fr)}
+    }
+    @media (max-width:640px){
+      .usl-grid,.usl-scale{grid-template-columns:1fr}
+      .usl-cathead__row{gap:var(--s-3)}
+    }
+  </style>
+</head>
+<body>
+  <div data-mkt-header></div>
+
+  <main id="view"></main>
+
+  <footer data-mkt-footer></footer>
+
+  <script src="assets/data.js?v=8"></script>
+  <script src="assets/shell.js?v=8"></script>
+  <script>
+  /* ============================================================
+     СТРАНИЦА «УСЛУГИ» — два режима по query:
+       (1) без ?s  → ИНДЕКС 11 категорий услуг (Шары первыми).
+       (2) ?s=slug → ЛИСТИНГ товаров категории: фасеты + сетка
+                     .prod-card, каждая карточка ведёт в tovar.html?id=.
+     P0 drill-in: индекс → листинг → карточка товара. Без попапов.
+     ============================================================ */
+  window.renderPage = function () {
+    var S = window.SHELL, P = window.PINK;
+    var view = document.getElementById('view');
+
+    // ── СКЛОНЕНИЯ ──
+    function pos(n) { return (n % 10 === 1 && n % 100 !== 11) ? 0
+      : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? 1 : 2; }
+    function plural(n, forms) { return n + ' ' + forms[pos(n)]; }
+    function posN(n)  { return plural(n, ['позиция', 'позиции', 'позиций']); }
+    // только слово, без числа (для счётчика со своим <strong>число</strong>)
+    function posWord(n) { return ['позиция', 'позиции', 'позиций'][pos(n)]; }
+    function otzN(n)  { return plural(n, ['отзыв', 'отзыва', 'отзывов']); }
+
+    // ── ЗВЁЗДНЫЙ РЕЙТИНГ ──
+    function rateStr(r) { return (r || 0).toFixed(1).replace('.', ','); }
+
+    // ── 11 категорий: порядок (Шары — ЯДРО первыми) ──
+    var SLUG_ORDER = ['balloons','desserts','flowers','photo','kidshow',
+                      'animators','decor','catering','cleanup','cert','courier'];
+    var catBySlug = {};
+    (P.serviceCatalog || []).forEach(function (c) { catBySlug[c.slug] = c; });
+
+    var sParam = S.qparam('s');
+    var routeCat = (sParam && catBySlug[sParam]) ? catBySlug[sParam] : null;
+
+    // ════════════════════════════════════════════════════════════
+    //  РЕЖИМ 2 — ЛИСТИНГ ТОВАРОВ КАТЕГОРИИ (?s=slug)
+    // ════════════════════════════════════════════════════════════
+    if (routeCat) { renderListing(routeCat); return; }
+
+    // ════════════════════════════════════════════════════════════
+    //  РЕЖИМ 1 — ИНДЕКС 11 КАТЕГОРИЙ
+    // ════════════════════════════════════════════════════════════
+    renderIndex();
+
+    /* ------------------------------------------------------------
+       ИНДЕКС: крупные карточки-категории → uslugi.html?s=slug
+       ------------------------------------------------------------ */
+    function renderIndex() {
+      var cards = SLUG_ORDER.map(function (slug, i) {
+        var c = catBySlug[slug];
+        if (!c) return '';
+        var n = P.productsByCategory(slug).length;
+        var isCore = c.tag === 'ядро';
+        return '' +
+          '<a class="usl-cat mkt-reveal" data-d="' + ((i % 3) + 1) + '" href="' + S.uslugiHref(slug) + '">' +
+            '<div class="usl-cat__top">' +
+              '<span class="usl-cat__emoji" aria-hidden="true">' + S.esc(c.emoji) + '</span>' +
+              (isCore
+                ? '<span class="usl-tag usl-tag--core">ЯДРО</span>'
+                : '<span class="usl-cat__n">' + posN(n) + '</span>') +
+            '</div>' +
+            '<div class="usl-cat__body">' +
+              '<h2 class="usl-cat__name">' + S.esc(c.name) + '</h2>' +
+              '<p class="usl-cat__desc">' + S.esc(c.desc) + '</p>' +
+              '<div class="usl-cat__foot">' +
+                '<span class="usl-cat__price"><span class="usl-from">от</span>' +
+                  S.money(c.priceFrom) + '</span>' +
+                '<span class="usl-cat__go">Смотреть' +
+                  '<svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">' +
+                    '<path d="M3 7.5h8M7.5 4l3.5 3.5L7.5 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+                '</span>' +
+              '</div>' +
+            '</div>' +
+          '</a>';
+      }).join('');
+
+      var totalProducts = (P.products || []).length;
+      var totalCats = SLUG_ORDER.filter(function (s) { return catBySlug[s]; }).length;
+      var gal = P.gallery || [];
+      var heroPhotos = [gal[10], gal[1], gal[6]].filter(Boolean)
+        .map(function (g) { return S.mktPhoto(g, true); }).join('');
+
+      view.innerHTML = '' +
+        '<div class="wrap" style="padding-top:var(--s-4)">' +
+          S.crumbs([{ label: 'Главная', href: 'index.html' }, { label: 'Все услуги' }]) +
+        '</div>' +
+
+        // HERO
+        '<section class="mkt-hero">' +
+          '<div class="mkt-hero__inner">' +
+            '<div class="mkt-hero__copy">' +
+              '<h1 class="mkt-hero__title">Весь праздник —<br><em>в одной корзине</em></h1>' +
+              '<p class="mkt-hero__lead">Шары — наше ядро. Вокруг него собран весь праздник: ' +
+                'десерты, цветы, съёмка, шоу и логистика. Выбираете услугу — попадаете в каталог ' +
+                'позиций, добавляете в корзину и собираете заказ в один чек.</p>' +
+              '<div class="mkt-hero__cta">' +
+                '<a class="btn btn--primary btn--lg" href="' + S.uslugiHref('balloons') + '">Начать с шаров</a>' +
+                '<a class="btn btn--ghost btn--lg" href="pakety.html">Готовые пакеты</a>' +
+              '</div>' +
+              '<div class="mkt-hero__trust">' +
+                '<span><strong>5,0</strong> рейтинг по 173 оценкам</span>' +
+                '<span class="mkt-hero__sep" aria-hidden="true"></span>' +
+                '<span><strong>738</strong> праздников собрано</span>' +
+              '</div>' +
+            '</div>' +
+            '<div class="mkt-hero__collage">' + heroPhotos + '</div>' +
+          '</div>' +
+        '</section>' +
+
+        // РАЗМАХ
+        '<section class="mkt-band mkt-band--ghost">' +
+          '<div class="mkt-band__inner">' +
+            '<div class="usl-scale">' +
+              '<div class="usl-scale__cell mkt-reveal" data-d="1">' +
+                '<div class="usl-scale__v">' + totalCats + '</div>' +
+                '<div class="usl-scale__l">направлений услуг — от шаров до уборки после</div></div>' +
+              '<div class="usl-scale__cell mkt-reveal" data-d="2">' +
+                '<div class="usl-scale__v">' + totalProducts + '</div>' +
+                '<div class="usl-scale__l">конкретных позиций в каталоге, готовых в корзину</div></div>' +
+              '<div class="usl-scale__cell mkt-reveal" data-d="3">' +
+                '<div class="usl-scale__v">5,0</div>' +
+                '<div class="usl-scale__l">рейтинг площадки по 173 оценкам клиентов</div></div>' +
+              '<div class="usl-scale__cell mkt-reveal" data-d="4">' +
+                '<div class="usl-scale__v">1 чек</div>' +
+                '<div class="usl-scale__l">оплата в эскроу за все услуги сразу — один заказ</div></div>' +
+            '</div>' +
+          '</div>' +
+        '</section>' +
+
+        // КАТАЛОГ КАТЕГОРИЙ
+        '<section class="mkt-band">' +
+          '<div class="mkt-band__inner">' +
+            '<div class="mkt-band__head mkt-reveal">' +
+              '<h2 class="mkt-h2">Выберите направление</h2>' +
+              '<p class="mkt-lead">Шары — ядро Pinkshar. Кликните на направление, ' +
+                'чтобы открыть каталог позиций с фильтрами по поводу, бюджету и цвету.</p>' +
+            '</div>' +
+            '<div class="usl-grid">' + cards + '</div>' +
+          '</div>' +
+        '</section>' +
+
+        // LOOKBOOK
+        '<section class="mkt-band mkt-band--ghost">' +
+          '<div class="mkt-band__inner">' +
+            '<div class="mkt-band__head mkt-band__head--center mkt-reveal">' +
+              '<h2 class="mkt-h2">Так это выглядит вживую</h2>' +
+            '</div>' +
+            '<div class="mkt-lookbook mkt-reveal">' +
+              gal.slice(0, 12).map(function (g) { return S.mktPhoto(g, true); }).join('') +
+            '</div>' +
+          '</div>' +
+        '</section>' +
+
+        // CTA
+        '<section class="mkt-ctaband">' +
+          '<div class="mkt-ctaband__inner">' +
+            '<div>' +
+              '<h2 class="mkt-ctaband__title">Соберите свой праздник из этих услуг</h2>' +
+              '<p class="mkt-ctaband__lead">Начните с шаров — нашего ядра — и добавьте ' +
+                'десерты, цветы и шоу. Всё в один заказ с оплатой в эскроу.</p>' +
+            '</div>' +
+            '<div class="mkt-ctaband__cta">' +
+              '<a class="btn btn--white btn--lg" href="' + S.uslugiHref('balloons') + '">Каталог шаров</a>' +
+              '<a class="btn btn--onpink-ghost btn--lg" href="povod.html">Выбрать по поводу</a>' +
+            '</div>' +
+          '</div>' +
+        '</section>';
+    }
+
+    /* ------------------------------------------------------------
+       ЛИСТИНГ: фасеты (Повод · Бюджет · Рейтинг · атрибут категории)
+       + сортировка + чипсы + сетка .prod-card. Фильтрация без перезагрузки.
+       ------------------------------------------------------------ */
+    function renderListing(c) {
+      var slug = c.slug;
+      var items = P.productsByCategory(slug);
+      var occ = P.occasions || [];
+      var occName = {}; occ.forEach(function (o) { occName[o.id] = o; });
+
+      // --- определяем фасетируемый атрибут категории (Цвет приоритетно) ---
+      var ATTR_PREF = ['Цвет', 'Размер', 'Состав', 'Формат', 'Длительность', 'Персон', 'Номинал'];
+      var attrKey = null;
+      for (var k = 0; k < ATTR_PREF.length; k++) {
+        if (items.some(function (p) { return p.attributes && p.attributes[ATTR_PREF[k]] != null; })) {
+          attrKey = ATTR_PREF[k]; break;
+        }
+      }
+
+      // --- бюджет-пресеты (по реальному разбросу цен категории) ---
+      var BUDGETS = [
+        { id: 'b1', label: 'до 3 000 ₽',     min: 0,     max: 3000 },
+        { id: 'b2', label: '3 000–7 000 ₽',  min: 3000,  max: 7000 },
+        { id: 'b3', label: '7 000–15 000 ₽', min: 7000,  max: 15000 },
+        { id: 'b4', label: 'от 15 000 ₽',    min: 15000, max: Infinity }
+      ];
+
+      // --- состояние фильтров ---
+      var state = { occ: {}, budget: {}, rating: {}, attr: {}, sort: 'pop' };
+
+      // --- helper: набор активных поводов в категории (для фасета) ---
+      function occCount(occId, base) {
+        return base.filter(function (p) { return (p.occasions || []).indexOf(occId) >= 0; }).length;
+      }
+      function budgetCount(b, base) {
+        return base.filter(function (p) { return p.price >= b.min && p.price < b.max; }).length;
+      }
+      function ratingCount(min, base) {
+        return base.filter(function (p) { return (p.rating || 0) >= min; }).length;
+      }
+      function attrCount(val, base) {
+        return base.filter(function (p) { return p.attributes && p.attributes[attrKey] === val; }).length;
+      }
+
+      // --- уникальные значения выбранного атрибута ---
+      var attrVals = [];
+      if (attrKey) {
+        items.forEach(function (p) {
+          var v = p.attributes && p.attributes[attrKey];
+          if (v != null && attrVals.indexOf(v) < 0) attrVals.push(v);
+        });
+      }
+
+      // --- какие поводы реально встречаются ---
+      var usedOcc = occ.filter(function (o) { return occCount(o.id, items) > 0; });
+
+      // --- пороги рейтинга ---
+      var RATINGS = [{ id: 'r49', min: 4.9, label: 'от 4,9' },
+                     { id: 'r48', min: 4.8, label: 'от 4,8' },
+                     { id: 'r47', min: 4.7, label: 'от 4,7' }];
+
+      // ── РАЗМЕТКА ──
+      view.innerHTML = '' +
+        '<div class="wrap" style="padding-top:var(--s-4)">' +
+          S.crumbs([
+            { label: 'Главная', href: 'index.html' },
+            { label: 'Все услуги', href: 'uslugi.html' },
+            { label: c.name }
+          ]) +
+
+          // категория-хедер (H1)
+          '<div class="usl-cathead">' +
+            '<div class="usl-cathead__row">' +
+              '<span class="usl-cathead__emoji" aria-hidden="true">' + S.esc(c.emoji) + '</span>' +
+              '<div>' +
+                '<h1>' + S.esc(c.name) + '</h1>' +
+              '</div>' +
+            '</div>' +
+            '<p class="usl-cathead__desc">' + S.esc(c.desc) + '</p>' +
+          '</div>' +
+        '</div>' +
+
+        '<section class="mkt-band">' +
+          '<div class="mkt-band__inner">' +
+            '<div class="listing">' +
+
+              // ── САЙДБАР ФАСЕТОВ ──
+              '<aside class="listing__sidebar" data-facets>' +
+                // Повод
+                (usedOcc.length ? facetCheckGroup('Повод', 'occ', usedOcc.map(function (o) {
+                  return { val: o.id, name: o.name, count: occCount(o.id, items) };
+                })) : '') +
+                // Бюджет (пилюли)
+                facetPillGroup('Бюджет', 'budget', BUDGETS.filter(function (b) {
+                  return budgetCount(b, items) > 0;
+                }).map(function (b) {
+                  return { val: b.id, name: b.label };
+                })) +
+                // Рейтинг подрядчика
+                facetCheckGroup('Рейтинг', 'rating', RATINGS.filter(function (r) {
+                  return ratingCount(r.min, items) > 0;
+                }).map(function (r) {
+                  return { val: r.id, name: '★ ' + r.label, count: ratingCount(r.min, items) };
+                })) +
+                // Атрибут категории (напр. Цвет)
+                (attrKey && attrVals.length > 1 ? facetCheckGroup(attrKey, 'attr', attrVals.map(function (v) {
+                  return { val: v, name: v, count: attrCount(v, items) };
+                })) : '') +
+              '</aside>' +
+
+              // ── ОСНОВНАЯ КОЛОНКА ──
+              '<div class="listing__main">' +
+                '<div class="listing__bar">' +
+                  '<span class="listing__count" data-count><strong>' + items.length + '</strong> ' + posWord(items.length) + '</span>' +
+                  '<label class="sort">' +
+                    '<span class="sort__label">Сортировка</span>' +
+                    '<select class="select" data-sort>' +
+                      '<option value="pop">По популярности</option>' +
+                      '<option value="rating">Сначала с высоким рейтингом</option>' +
+                      '<option value="cheap">Сначала дешевле</option>' +
+                      '<option value="exp">Сначала дороже</option>' +
+                    '</select>' +
+                  '</label>' +
+                '</div>' +
+                '<div class="chips" data-chips hidden></div>' +
+                '<div class="prod-grid" data-grid></div>' +
+              '</div>' +
+
+            '</div>' +
+          '</div>' +
+        '</section>';
+
+      // ── рендер фасет-групп ──
+      function facetCheckGroup(title, group, opts) {
+        if (!opts.length) return '';
+        var list = opts.map(function (o) {
+          return '<label class="facet__opt">' +
+            '<input type="checkbox" data-facet="' + group + '" value="' + S.esc(String(o.val)) + '">' +
+            '<span class="facet__name">' + S.esc(o.name) + '</span>' +
+            '<span class="facet__count" data-fc="' + group + ':' + S.esc(String(o.val)) + '">' + o.count + '</span>' +
+          '</label>';
+        }).join('');
+        return '<div class="facet"><div class="facet__title">' + S.esc(title) + '</div>' +
+          '<div class="facet__list">' + list + '</div></div>';
+      }
+      function facetPillGroup(title, group, opts) {
+        if (!opts.length) return '';
+        var pills = opts.map(function (o) {
+          return '<button type="button" class="facet__pill" data-facet="' + group +
+            '" data-val="' + S.esc(String(o.val)) + '">' + S.esc(o.name) + '</button>';
+        }).join('');
+        return '<div class="facet"><div class="facet__title">' + S.esc(title) + '</div>' +
+          '<div class="facet__pills">' + pills + '</div></div>';
+      }
+
+      // ── одна .prod-card (вся карточка кликабельна; «В корзину» — отдельная кнопка) ──
+      function card(p) {
+        var photo = (p.photos && p.photos[0]) || '';
+        var emoji = c.emoji || '🎈';
+        var label = p.name;
+        var fb = "this.closest('.prod-card__media').classList.add('prod-card__media--fallback')";
+        var sale = (p.oldPrice && p.oldPrice > p.price)
+          ? '<span class="prod-card__sale">−' + Math.round((1 - p.price / p.oldPrice) * 100) + '%</span>' : '';
+        var ctr = S.contractorById(p.contractorId);
+        // ВНИМАНИЕ: карточка — это <a>, поэтому исполнитель тут НЕ ссылка
+        // (вложенные <a> запрещены и ломают разметку). Профиль доступен из карточки товара (PDP).
+        var partner = ctr
+          ? '<div class="prod-card__partner">Исполнитель: ' +
+              '<b style="color:var(--plum);font-weight:600">' + S.esc(ctr.name) + '</b>' +
+              ' · <span class="prod-card__rating" style="font-weight:700">' +
+              '<span class="star" style="color:var(--gold)">★</span>' + rateStr(ctr.rating) + '</span></div>'
+          : '<div class="prod-card__partner">Продукт площадки Pinkshar</div>';
+        var priceBlock = (p.priceType === 'from')
+          ? '<span class="prod-card__from">от</span>' +
+            '<span class="prod-card__amount">' + S.money(p.price) + '</span>'
+          : '<span class="prod-card__amount">' + S.money(p.price) + '</span>' +
+            (p.oldPrice ? '<span class="prod-card__old">' + S.money(p.oldPrice) + '</span>' : '');
+        var ctaLabel = (p.priceType === 'from') ? 'Забронировать' : 'В корзину';
+
+        return '' +
+          '<a class="prod-card" href="' + S.tovarHref(p.id) + '" ' +
+              'data-card data-price="' + p.price + '" data-rating="' + (p.rating || 0) + '" ' +
+              'data-occ="' + S.esc((p.occasions || []).join(',')) + '" ' +
+              'data-attr="' + S.esc(attrKey && p.attributes ? (p.attributes[attrKey] || '') : '') + '" ' +
+              'data-pop="' + (p.reviewsCount || 0) + '">' +
+            '<div class="prod-card__media">' +
+              '<img src="' + S.esc(photo) + '" alt="' + S.esc(label) + '" loading="lazy" onerror="' + fb + '">' +
+              sale +
+            '</div>' +
+            '<div class="prod-card__body">' +
+              '<div class="prod-card__name">' + S.esc(p.name) + '</div>' +
+              '<div class="prod-card__meta">' +
+                '<span class="prod-card__rating"><span class="star">★</span>' + rateStr(p.rating) + '</span>' +
+                '<span>' + otzN(p.reviewsCount || 0) + '</span>' +
+              '</div>' +
+              partner +
+              '<div class="prod-card__foot">' +
+                '<div class="prod-card__price">' + priceBlock + '</div>' +
+                '<button type="button" class="prod-card__cart" data-add="' + S.esc(p.id) + '" ' +
+                    'aria-label="' + ctaLabel + '" title="' + ctaLabel + '">' +
+                  '<svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">' +
+                    '<path d="M3 4h2l1.6 9.4a1 1 0 0 0 1 .85h7.9a1 1 0 0 0 1-.82L19 7H6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>' +
+                    '<circle cx="8.5" cy="18" r="1.3" fill="currentColor"/><circle cx="16" cy="18" r="1.3" fill="currentColor"/></svg>' +
+                '</button>' +
+              '</div>' +
+            '</div>' +
+          '</a>';
+      }
+
+      var gridEl  = view.querySelector('[data-grid]');
+      var countEl = view.querySelector('[data-count]');
+      var chipsEl = view.querySelector('[data-chips]');
+      var sortEl  = view.querySelector('[data-sort]');
+
+      // ── применить фильтр + сортировку, перерисовать сетку ──
+      function apply() {
+        var occOn    = Object.keys(state.occ).filter(function (k) { return state.occ[k]; });
+        var budgetOn = Object.keys(state.budget).filter(function (k) { return state.budget[k]; });
+        var ratingOn = Object.keys(state.rating).filter(function (k) { return state.rating[k]; });
+        var attrOn   = Object.keys(state.attr).filter(function (k) { return state.attr[k]; });
+
+        var ratMin = ratingOn.length
+          ? Math.min.apply(null, ratingOn.map(function (id) {
+              var r = RATINGS.find(function (x) { return x.id === id; }); return r ? r.min : 0;
+            })) : 0;
+
+        var out = items.filter(function (p) {
+          if (occOn.length && !occOn.some(function (o) { return (p.occasions || []).indexOf(o) >= 0; })) return false;
+          if (budgetOn.length && !budgetOn.some(function (id) {
+            var b = BUDGETS.find(function (x) { return x.id === id; });
+            return b && p.price >= b.min && p.price < b.max;
+          })) return false;
+          if (ratMin && (p.rating || 0) < ratMin) return false;
+          if (attrOn.length && !(p.attributes && attrOn.indexOf(p.attributes[attrKey]) >= 0)) return false;
+          return true;
+        });
+
+        out.sort(function (a, b) {
+          if (state.sort === 'cheap')  return a.price - b.price;
+          if (state.sort === 'exp')    return b.price - a.price;
+          if (state.sort === 'rating') return (b.rating || 0) - (a.rating || 0) || (b.reviewsCount || 0) - (a.reviewsCount || 0);
+          return (b.reviewsCount || 0) - (a.reviewsCount || 0); // pop
+        });
+
+        gridEl.innerHTML = out.length
+          ? out.map(card).join('')
+          : '<div class="usl-empty">' +
+              '<div class="usl-empty__icon" aria-hidden="true">' + S.esc(c.emoji) + '</div>' +
+              '<p class="usl-empty__title">Под эти фильтры ничего не нашлось</p>' +
+              '<p class="usl-empty__text">Снимите часть фильтров — покажем больше позиций в категории.</p>' +
+              '<button class="btn btn--soft" type="button" data-clear-all>Сбросить фильтры</button>' +
+            '</div>';
+
+        countEl.innerHTML = '<strong>' + out.length + '</strong> ' + posWord(out.length);
+        renderChips(occOn, budgetOn, ratingOn, attrOn);
+      }
+
+      // ── чипсы активных фильтров ──
+      function renderChips(occOn, budgetOn, ratingOn, attrOn) {
+        var chips = [];
+        occOn.forEach(function (id) {
+          var o = occName[id]; chips.push({ g: 'occ', v: id, label: o ? o.name : id });
+        });
+        budgetOn.forEach(function (id) {
+          var b = BUDGETS.find(function (x) { return x.id === id; });
+          chips.push({ g: 'budget', v: id, label: b ? b.label : id });
+        });
+        ratingOn.forEach(function (id) {
+          var r = RATINGS.find(function (x) { return x.id === id; });
+          chips.push({ g: 'rating', v: id, label: '★ ' + (r ? r.label : id) });
+        });
+        attrOn.forEach(function (v) {
+          chips.push({ g: 'attr', v: v, label: attrKey + ': ' + v });
+        });
+        if (!chips.length) { chipsEl.hidden = true; chipsEl.innerHTML = ''; return; }
+        chipsEl.hidden = false;
+        chipsEl.innerHTML = chips.map(function (ch) {
+          return '<span class="chip">' + S.esc(ch.label) +
+            '<button type="button" class="chip__x" data-chip-x="' + ch.g + '" data-chip-v="' + S.esc(String(ch.v)) + '" aria-label="Убрать фильтр">' +
+              '<svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 2l7 7M9 2l-7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>' +
+            '</button></span>';
+        }).join('') +
+          '<button type="button" class="chip chip--clear" data-clear-all>Сбросить всё</button>';
+      }
+
+      // ── обработчики ──
+      var sidebar = view.querySelector('[data-facets]');
+
+      // чекбоксы (Повод / Рейтинг / Атрибут)
+      sidebar.addEventListener('change', function (e) {
+        var inp = e.target.closest('input[data-facet]');
+        if (!inp) return;
+        var g = inp.getAttribute('data-facet'), v = inp.value;
+        state[g][v] = inp.checked;
+        apply();
+      });
+      // пилюли (Бюджет)
+      sidebar.addEventListener('click', function (e) {
+        var pill = e.target.closest('.facet__pill[data-facet]');
+        if (!pill) return;
+        var g = pill.getAttribute('data-facet'), v = pill.getAttribute('data-val');
+        state[g][v] = !state[g][v];
+        pill.classList.toggle('active', !!state[g][v]);
+        apply();
+      });
+      // сортировка
+      sortEl.addEventListener('change', function () { state.sort = sortEl.value; apply(); });
+
+      // чипсы: снять один фильтр / сбросить всё
+      view.addEventListener('click', function (e) {
+        var x = e.target.closest('[data-chip-x]');
+        if (x) {
+          var g = x.getAttribute('data-chip-x'), v = x.getAttribute('data-chip-v');
+          state[g][v] = false;
+          syncControl(g, v, false);
+          apply(); return;
+        }
+        if (e.target.closest('[data-clear-all]')) { clearAll(); return; }
+      });
+
+      // синхронизация контрола при снятии чипса
+      function syncControl(g, v, on) {
+        if (g === 'budget') {
+          var pill = sidebar.querySelector('.facet__pill[data-facet="budget"][data-val="' + cssEsc(v) + '"]');
+          if (pill) pill.classList.toggle('active', on);
+        } else {
+          var inp = sidebar.querySelector('input[data-facet="' + g + '"][value="' + cssEsc(v) + '"]');
+          if (inp) inp.checked = on;
+        }
+      }
+      function cssEsc(s) { return String(s).replace(/["\\]/g, '\\$&'); }
+
+      function clearAll() {
+        state.occ = {}; state.budget = {}; state.rating = {}; state.attr = {};
+        sidebar.querySelectorAll('input[data-facet]').forEach(function (i) { i.checked = false; });
+        sidebar.querySelectorAll('.facet__pill.active').forEach(function (p) { p.classList.remove('active'); });
+        apply();
+      }
+
+      // клик по «В корзину» — НЕ переходить по карточке (drill-in остаётся навигацией)
+      gridEl.addEventListener('click', function (e) {
+        var add = e.target.closest('[data-add]');
+        if (!add) return;
+        e.preventDefault();
+        S.addToCart(add.getAttribute('data-add'), 1);
+        add.classList.add('is-added');
+        setTimeout(function () { add.classList.remove('is-added'); }, 900);
+      });
+
+      apply();
+    }
+  };
+  </script>
+</body>
+</html>

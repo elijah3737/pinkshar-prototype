@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pinkshar — маркетплейс праздника под ключ</title>
+  <meta name="description" content="Шары, торт, цветы, фотограф, шоу и уборка — в одной заявке и одном чеке. Pinkshar собирает всю команду праздника. Москва.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="assets/app.css?v=8">
+</head>
+<body>
+  <!-- демо-бар + sticky-хедер + мобменю (рендерит shell.js) -->
+  <div data-mkt-header></div>
+
+  <main id="view">
+
+    <!-- ====================== HERO ====================== -->
+    <section class="mkt-hero">
+      <div class="mkt-hero__inner">
+        <div class="home-hero__copy mkt-reveal">
+          <p class="mkt-hero__kicker">Маркетплейс праздника · Москва</p>
+          <h1 class="mkt-hero__title">
+            Весь праздник <em>под ключ</em> —<br>одной заявкой
+          </h1>
+          <p class="mkt-hero__lead">
+            Шары, торт, цветы, фотограф, шоу и уборка — в одной заявке и одном чеке.
+            Pinkshar собирает всю команду праздника, а вы только встречаете гостей.
+          </p>
+          <div class="mkt-hero__cta">
+            <a class="btn btn--primary btn--lg" href="pakety.html">Собрать праздник</a>
+            <a class="btn btn--ghost btn--lg" href="o-platforme.html">Как это устроено</a>
+          </div>
+          <p class="home-hero__cta-note">Смету пришлём за час. Оплата только после согласования.</p>
+          <div class="mkt-hero__trust">
+            <span><strong id="heroRating">5,0</strong><span id="heroRatingCount">рейтинг по 173 оценкам</span></span>
+            <span class="mkt-hero__sep" aria-hidden="true"></span>
+            <span><strong id="heroParties">738</strong>праздников уже собрано</span>
+            <span class="mkt-hero__sep" aria-hidden="true"></span>
+            <span><strong id="heroServices">11</strong>услуг в одной корзине</span>
+          </div>
+        </div>
+
+        <div class="home-hero__aside mkt-reveal" data-d="1">
+          <div class="mkt-hero__collage" id="heroCollage"></div>
+          <aside class="card home-hero__panel" aria-label="Как устроена заявка">
+            <div class="home-hero__panel-head">
+              <span class="serif home-hero__panel-title">Одна заявка, вся команда</span>
+              <span class="badge badge--paid">Оплата в эскроу</span>
+            </div>
+            <ul class="home-hero__stack" id="heroStack"></ul>
+            <p class="home-hero__panel-note muted">
+              Деньги придерживаем до выполнения. Комиссию берём с подрядчика, не с вас.
+            </p>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================== ЭКОСИСТЕМА ====================== -->
+    <section class="mkt-band">
+      <div class="mkt-band__inner">
+        <div class="mkt-band__head mkt-reveal">
+          <p class="mkt-eyebrow">Размах платформы</p>
+          <h2 class="mkt-h2">Всё для праздника в одном месте</h2>
+          <p class="mkt-lead">
+            В центре — шары и оформление, наше ядро и собственное производство.
+            Вокруг нанизываются проверенные подрядчики: десерты, цветы, съёмка, шоу, кейтеринг.
+            Один повод превращается в целую команду.
+          </p>
+        </div>
+        <div class="mkt-eco mkt-reveal" data-d="1" id="ecoMap"></div>
+        <div class="home-scale mkt-reveal" data-d="2" id="ecoScale"></div>
+      </div>
+    </section>
+
+    <!-- ====================== ПОВОДЫ ====================== -->
+    <section class="mkt-band mkt-band--ghost">
+      <div class="mkt-band__inner">
+        <div class="between mkt-band__head" style="max-width:none;align-items:flex-end">
+          <div style="max-width:60ch">
+            <p class="mkt-eyebrow">С чего начать</p>
+            <h2 class="mkt-h2">Выберите повод</h2>
+            <p class="mkt-lead">С него стартует подбор: покажем подходящие пакеты, услуги и реальные работы.</p>
+          </div>
+          <a class="btn btn--ghost" href="povod.html">Все поводы</a>
+        </div>
+        <div class="mkt-occasions mkt-reveal" data-d="1" id="occasionGrid"></div>
+      </div>
+    </section>
+
+    <!-- ====================== ПАКЕТЫ ====================== -->
+    <section class="mkt-band">
+      <div class="mkt-band__inner">
+        <div class="between mkt-band__head" style="max-width:none;align-items:flex-end">
+          <div style="max-width:60ch">
+            <p class="mkt-eyebrow">Готовые решения</p>
+            <h2 class="mkt-h2">Пакеты под повод</h2>
+            <p class="mkt-lead">Шары и услуги собраны заранее. Фиксированная цена, оформление одной заявкой и одним чеком.</p>
+          </div>
+          <a class="btn btn--ghost" href="pakety.html">Все пакеты</a>
+        </div>
+        <div class="mkt-pkgs mkt-reveal" data-d="1" id="packageGrid"></div>
+      </div>
+    </section>
+
+    <!-- ====================== УСЛУГИ (тизер ширины) ====================== -->
+    <section class="mkt-band mkt-band--ghost">
+      <div class="mkt-band__inner">
+        <div class="between mkt-band__head" style="max-width:none;align-items:flex-end">
+          <div style="max-width:60ch">
+            <p class="mkt-eyebrow">Каталог</p>
+            <h2 class="mkt-h2">Одиннадцать услуг в одной корзине</h2>
+            <p class="mkt-lead">Шары — ядро. Вокруг — десерты, цветы, фото, шоу, декор, кейтеринг, логистика и собственные продукты Pinkshar.</p>
+          </div>
+          <a class="btn btn--ghost" href="uslugi.html">Все услуги</a>
+        </div>
+        <div class="home-svc mkt-reveal" data-d="1" id="serviceTeaser"></div>
+      </div>
+    </section>
+
+    <!-- ====================== LOOKBOOK ====================== -->
+    <section class="mkt-band">
+      <div class="mkt-band__inner">
+        <div class="mkt-band__head mkt-reveal">
+          <p class="mkt-eyebrow">Lookbook</p>
+          <h2 class="mkt-h2">Реальные работы, а не рендеры</h2>
+          <p class="mkt-lead">Оформление выписок, выпускных, гендер-пати и юбилеев — то, что мы уже собрали для клиентов.</p>
+        </div>
+        <div class="mkt-lookbook mkt-reveal" data-d="1" id="lookbook"></div>
+      </div>
+    </section>
+
+    <!-- ====================== КАК РАБОТАЕТ ====================== -->
+    <section class="mkt-band mkt-band--ghost">
+      <div class="mkt-band__inner">
+        <div class="mkt-band__head mkt-reveal">
+          <p class="mkt-eyebrow">Просто</p>
+          <h2 class="mkt-h2">Как это работает</h2>
+          <p class="mkt-lead">Четыре шага от заявки до уборки. Вы только согласовываете детали и встречаете гостей.</p>
+        </div>
+        <ol class="mkt-steps mkt-reveal" data-d="1" id="stepGrid"></ol>
+      </div>
+    </section>
+
+    <!-- ====================== VISION-ТИЗЕР ====================== -->
+    <section class="mkt-band">
+      <div class="mkt-band__inner">
+        <div class="mkt-vision mkt-reveal">
+          <div class="mkt-manifesto" id="manifesto"></div>
+          <div class="mkt-vision__why">
+            <div class="home-vision__stats mkt-stats" id="visionStats"></div>
+            <div class="home-vision__roadmap" id="visionRoadmap"></div>
+            <a class="btn btn--soft" href="o-platforme.html">Куда мы целимся →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================== ДВУСТОРОННОСТЬ ====================== -->
+    <section class="mkt-band mkt-band--ghost">
+      <div class="mkt-band__inner">
+        <div class="mkt-twoside mkt-reveal">
+          <div class="mkt-side">
+            <h2 class="mkt-side__t">Вы хотите праздник</h2>
+            <p class="mkt-side__lead">Соберите повод одной заявкой — мы подберём команду, удержим оплату в эскроу и проследим за качеством.</p>
+            <ul class="mkt-side__list">
+              <li>Шары, торт, цветы, фото и шоу в одном чеке</li>
+              <li>Оплата только после подбора и согласования</li>
+              <li>Возврат, если подрядчик подвёл</li>
+            </ul>
+            <div class="mkt-side__foot">
+              <a class="btn btn--primary" href="pakety.html">Собрать праздник</a>
+            </div>
+          </div>
+          <div class="mkt-side mkt-side--accent">
+            <h2 class="mkt-side__t">Вы — кондитер, фотограф, аниматор?</h2>
+            <p class="mkt-side__lead" id="partnerPitch"></p>
+            <ul class="mkt-side__list" id="partnerBenefits"></ul>
+            <div class="mkt-side__foot">
+              <a class="btn btn--white" href="partneram.html">Стать подрядчиком</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================== ОТЗЫВЫ ====================== -->
+    <section class="mkt-band">
+      <div class="mkt-band__inner">
+        <div class="between mkt-band__head" style="max-width:none;align-items:flex-end">
+          <div style="max-width:60ch">
+            <p class="mkt-eyebrow">Доверие</p>
+            <h2 class="mkt-h2">Что говорят клиенты</h2>
+            <p class="mkt-lead">Реальные заказы за последний месяц — без приукрашиваний.</p>
+          </div>
+          <span class="rating">
+            <span class="star" aria-hidden="true">★</span>
+            <span class="mono">5,0</span>
+            <span class="count">по 173 оценкам</span>
+          </span>
+        </div>
+        <div class="home-reviews mkt-reveal" data-d="1" id="reviewGrid"></div>
+      </div>
+    </section>
+
+    <!-- ====================== ФИНАЛЬНАЯ CTA-ПОЛОСА ====================== -->
+    <section class="mkt-ctaband">
+      <div class="mkt-ctaband__inner">
+        <div>
+          <p class="mkt-ctaband__eyebrow">Остался один шаг</p>
+          <h2 class="mkt-ctaband__title">Расскажите про повод — соберём всё остальное</h2>
+          <p class="mkt-ctaband__lead">Одна заявка — вся команда. Оплата в эскроу, чек один, забота наша. Ответим в течение часа.</p>
+        </div>
+        <div class="mkt-ctaband__cta">
+          <a class="btn btn--white btn--lg" href="pakety.html">Собрать праздник</a>
+          <a class="btn btn--onpink-ghost btn--lg" href="o-platforme.html">Как это работает</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- мега-футер (рендерит shell.js) -->
+  <footer data-mkt-footer></footer>
+
+  <style>
+    /* ============ PAGE-SCOPED: home-* (главная) ============ */
+    /* Мелкая специфика страницы. Общие токены и .mkt-* не переопределяем. */
+
+    /* hero: микро-нота под CTA (снимает трение перед кликом) */
+    .home-hero__cta-note{font-size:13px;color:var(--muted);margin:calc(-1 * var(--s-4)) 0 var(--s-6);
+      display:flex;align-items:center;gap:7px}
+    .home-hero__cta-note::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;
+      background:var(--good)}
+
+    /* hero: правая колонка = коллаж + панель «одна заявка» */
+    .home-hero__aside{display:flex;flex-direction:column;gap:var(--s-4)}
+    .home-hero__panel{padding:var(--s-5)}
+    .home-hero__panel-head{display:flex;align-items:center;justify-content:space-between;
+      gap:var(--s-3);margin-bottom:var(--s-4)}
+    .home-hero__panel-title{font-size:18px;font-weight:600}
+    .home-hero__stack{display:flex;flex-direction:column}
+    .home-hero__stack li{display:flex;align-items:center;gap:var(--s-3);padding:10px 0;
+      border-top:1px solid var(--line)}
+    .home-hero__stack li:first-child{border-top:0;padding-top:0}
+    .home-hero__stack .se{font-size:21px;width:28px;text-align:center;flex:none}
+    .home-hero__stack .sn{font-weight:600;flex:1}
+    .home-hero__stack .sp{font-family:var(--font-mono);font-size:13px;color:var(--muted);white-space:nowrap}
+    .home-hero__panel-note{font-size:12.5px;margin:var(--s-4) 0 0;line-height:1.5}
+
+    /* услуги-тизер: компактные плитки ширины */
+    .home-svc{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s-3)}
+    .home-svc__item{display:flex;flex-direction:column;gap:5px;background:var(--card);
+      border:1px solid var(--line);border-radius:var(--r-md);padding:var(--s-4);
+      box-shadow:var(--sh-card);transition:transform .14s ease,border-color .14s ease}
+    .home-svc__item:hover{transform:translateY(-2px);border-color:var(--paper-edge)}
+    .home-svc__item--core{background:var(--pink-ghost);border-color:var(--pink-soft)}
+    .home-svc__top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .home-svc__emoji{font-size:24px;line-height:1}
+    .home-svc__name{font-weight:600;font-size:14.5px;margin-top:2px}
+    .home-svc__from{font-family:var(--font-mono);font-size:12.5px;color:var(--plum);font-weight:500}
+
+    /* vision: правый столбец — мини-роадмап «фаза → фаза» */
+    .home-vision__stats{grid-template-columns:repeat(2,1fr);gap:var(--s-5);margin-bottom:var(--s-2)}
+    .home-vision__roadmap{display:flex;flex-wrap:wrap;gap:8px;margin:var(--s-2) 0 var(--s-3)}
+    .home-vision__chip{display:inline-flex;flex-direction:column;gap:1px;
+      padding:8px 13px;border-radius:var(--r-md);background:var(--card);
+      border:1px solid var(--line)}
+    .home-vision__chip--now{background:var(--pink-ghost);border-color:var(--pink-soft)}
+    .home-vision__chip .ph{font-family:var(--font-mono);font-size:11px;color:var(--pink-strong);font-weight:600}
+    .home-vision__chip .ti{font-size:13px;font-weight:600;line-height:1.2}
+
+    /* lookbook: фото-плитка теперь ссылка на товар (обёртка-grid-элемент) */
+    .home-lookbook__link{display:block;text-decoration:none;color:inherit}
+    .home-lookbook__link .mkt-photo{margin:0}
+    .home-lookbook__link:focus-visible{outline:2px solid var(--pink-strong);
+      outline-offset:3px;border-radius:var(--r-lg)}
+
+    /* отзывы */
+    .home-reviews{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-4)}
+    .home-review{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+      padding:var(--s-5);box-shadow:var(--sh-card);display:flex;flex-direction:column;gap:var(--s-4)}
+    .home-review__stars{color:var(--gold);font-size:14px;letter-spacing:2px}
+    .home-review__text{font-size:14.5px;line-height:1.55;margin:0;flex:1}
+    .home-review__who{display:flex;align-items:center;gap:var(--s-3)}
+    .home-review__name{font-weight:600;font-size:13.5px}
+    .home-review__meta{font-size:12px;color:var(--muted)}
+
+    /* размах: строка масштаба под экосистемой */
+    .home-scale{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s-4);
+      margin-top:var(--s-6);padding-top:var(--s-6);border-top:1px solid var(--line)}
+    .home-scale__item{display:flex;flex-direction:column;gap:4px}
+    .home-scale__v{font-family:var(--font-mono);font-weight:600;
+      font-size:clamp(28px,3.4vw,40px);line-height:1;letter-spacing:-.03em;
+      color:var(--pink-strong);font-variant-numeric:tabular-nums}
+    .home-scale__l{font-size:13.5px;color:var(--muted);line-height:1.4}
+
+    /* финальная CTA-полоса: эйбрау */
+    .mkt-ctaband__eyebrow{font-family:var(--font-mono);font-size:12.5px;font-weight:600;
+      letter-spacing:.04em;text-transform:uppercase;color:rgba(255,255,255,.78);
+      margin:0 0 var(--s-3)}
+
+    @media (max-width:1000px){
+      .home-svc{grid-template-columns:repeat(2,1fr)}
+      .home-reviews{grid-template-columns:1fr 1fr}
+      .home-scale{grid-template-columns:1fr 1fr;gap:var(--s-5)}
+    }
+    @media (max-width:640px){
+      .home-svc,.home-reviews,
+      .home-vision__stats{grid-template-columns:1fr}
+    }
+  </style>
+
+  <script>
+  window.renderPage = function () {
+    var P = window.PINK, S = window.SHELL;
+    var esc = S.esc, money = S.money;
+
+    /* карта: occasion-id (данные) -> повод-slug (URL povod.html?o=) */
+    var OCC_SLUG = {
+      birthday: 'den-rozhdeniya', discharge: 'vypiska', gender: 'gender-pati',
+      hen: 'devichnik', prom: 'vypusknoy', wedding: 'svadba', jubilee: 'yubiley'
+    };
+    /* первый товар по категории (для проваливания lookbook -> карточка товара) */
+    function firstProductOfCategory(slug) {
+      return (P.products || []).filter(function (p) { return p.categorySlug === slug; })[0] || null;
+    }
+    /* подобрать товар под фото галереи: по occasion -> любой товар с этим поводом */
+    function productForGallery(g) {
+      if (!g) return null;
+      var byOcc = (P.products || []).filter(function (p) {
+        return (p.occasions || []).indexOf(g.occasion) !== -1;
+      });
+      return byOcc[0] || firstProductOfCategory('balloons');
+    }
+
+    /* плюрализация: plural(173,['оценка','оценки','оценок']) -> 'оценок' */
+    function plural(n, forms) {
+      var a = Math.abs(n) % 100, b = a % 10;
+      if (a > 10 && a < 20) return forms[2];
+      if (b > 1 && b < 5) return forms[1];
+      if (b === 1) return forms[0];
+      return forms[2];
+    }
+
+    /* ---------- HERO: числа доверия ---------- */
+    var kpi = P.platformKPI;
+    document.getElementById('heroRating').textContent =
+      kpi.rating.toFixed(1).replace('.', ',');
+    document.getElementById('heroRatingCount').textContent =
+      'рейтинг по ' + kpi.ratingCount + ' ' +
+      plural(kpi.ratingCount, ['оценке', 'оценкам', 'оценкам']);
+    document.getElementById('heroParties').textContent = S.num(kpi.partiesDone);
+    document.getElementById('heroServices').textContent = (P.services || []).length;
+
+    /* hero-коллаж: 3 реальных фото из gallery (разные поводы) */
+    var heroPics = [P.gallery[8], P.gallery[2], P.gallery[0]]; // ДР · выписка · выпускной
+    document.getElementById('heroCollage').innerHTML =
+      heroPics.map(function (g) { return S.mktPhoto(g, true); }).join('');
+
+    /* hero-стек: репрезентативный микс «ядро + топ-услуги» */
+    var heroMix = ['balloons', 'desserts', 'flowers', 'photo'];
+    document.getElementById('heroStack').innerHTML = heroMix.map(function (id) {
+      var sv = S.serviceById(id) || {};
+      return '<li><span class="se" aria-hidden="true">' + (sv.emoji || '•') + '</span>' +
+        '<span class="sn">' + esc(sv.name || '') + '</span>' +
+        '<span class="sp">от ' + money(sv.from) + '</span></li>';
+    }).join('');
+
+    /* ---------- ЭКОСИСТЕМА: ядро-шары + сателлиты ---------- */
+    var core = S.serviceById('balloons') || {};
+    var satIds = ['desserts', 'flowers', 'photo', 'kidshow', 'animators', 'decor', 'catering', 'cleanup'];
+    function tagLabel(kind) {
+      return kind === 'own' ? 'свой' : (kind === 'core' ? 'ядро' : 'партнёр');
+    }
+    var sats = satIds.map(function (id) {
+      var sv = S.serviceById(id) || {};
+      return '<a class="mkt-eco__sat" href="' + S.uslugiHref(id) + '">' +
+        '<span class="se" aria-hidden="true">' + (sv.emoji || '•') + '</span>' +
+        '<span class="sn">' + esc(sv.name || '') + '</span>' +
+        '<span class="st">' + tagLabel(sv.kind) + ' · от ' + money(sv.from) + '</span></a>';
+    }).join('');
+    document.getElementById('ecoMap').innerHTML =
+      '<div class="mkt-eco__core">' +
+        '<span class="mkt-eco__pill">Ядро Pinkshar</span>' +
+        '<span class="mkt-eco__emoji" aria-hidden="true">' + (core.emoji || '🎈') + '</span>' +
+        '<h3>' + esc(core.name || 'Шары и оформление') + '</h3>' +
+        '<p>Собственное производство: гирлянды, цифры, фонтаны, арки и фотозоны. ' +
+          'Вокруг ядра нанизываются все остальные услуги праздника — одной заявкой.</p>' +
+      '</div>' + sats;
+
+    /* ---------- РАЗМАХ: строка масштаба на реальных KPI ---------- */
+    var scaleItems = [
+      { v: (P.services || []).length, l: 'услуг в одной корзине' },
+      { v: kpi.activePartners, l: 'проверенных подрядчиков' },
+      { v: S.num(kpi.partiesDone), l: 'праздников уже собрано' },
+      { v: kpi.attachRate.toFixed(1).replace('.', ','), l: 'услуги в среднем заказе' }
+    ];
+    document.getElementById('ecoScale').innerHTML = scaleItems.map(function (s) {
+      return '<div class="home-scale__item"><span class="home-scale__v">' + esc(String(s.v)) +
+        '</span><span class="home-scale__l">' + esc(s.l) + '</span></div>';
+    }).join('');
+
+    /* ---------- ПОВОДЫ: крупные плитки с фото-фоном ---------- */
+    /* подбираем фото из gallery под каждый повод (первое совпадение по occasion) */
+    function photoForOccasion(occId) {
+      return (P.gallery || []).filter(function (g) { return g.occasion === occId; })[0] || null;
+    }
+    document.getElementById('occasionGrid').innerHTML = P.occasions.map(function (o) {
+      var g = photoForOccasion(o.id);
+      var hasPhoto = !!g;
+      var img = hasPhoto
+        ? '<div class="mkt-occasion__img"><img src="' + esc(g.src) + '" alt="' + esc(o.name) +
+            '" loading="lazy" onerror="this.closest(\'.mkt-occasion\').classList.add(\'mkt-occasion--fallback\')"></div>'
+        : '<div class="mkt-occasion__img"></div>';
+      var cls = 'mkt-occasion' + (hasPhoto ? '' : ' mkt-occasion--fallback');
+      var href = S.povodHref(OCC_SLUG[o.id]);
+      return '<a class="' + cls + '" href="' + href + '" aria-label="' + esc(o.name) + '">' +
+        img +
+        '<div class="mkt-occasion__veil" aria-hidden="true"></div>' +
+        '<div class="mkt-occasion__body">' +
+          '<span class="mkt-occasion__emoji" aria-hidden="true">' + o.emoji + '</span>' +
+          '<div class="mkt-occasion__name">' + esc(o.name) + '</div>' +
+          '<div class="mkt-occasion__count">' + o.count + ' ' +
+            plural(o.count, ['праздник', 'праздника', 'праздников']) + ' собрано</div>' +
+        '</div></a>';
+    }).join('');
+
+    /* ---------- ПАКЕТЫ: превью 3 карточки ---------- */
+    var pkgEmojiPhoto = {
+      'pkg-discharge': photoForOccasion('discharge'),
+      'pkg-kids':      photoForOccasion('birthday'),
+      'pkg-gender':    photoForOccasion('gender'),
+      'pkg-jubilee':   photoForOccasion('jubilee'),
+      'pkg-hen':       photoForOccasion('hen')
+    };
+    function tagBadgeClass(tag) {
+      return tag === 'премиум' ? 'badge--gold' : (tag === 'хит' ? 'badge--new' : 'badge--neutral');
+    }
+    function pkgCard(p) {
+      var occ = S.occasionById(p.occasion) || {};
+      var g = pkgEmojiPhoto[p.id];
+      // тег пакета лежит ВНУТРИ media: .mkt-pkg__tag позиционируется absolute
+      // относительно .mkt-pkg__media (position:relative), а не всей карточки
+      var tagEl = '<span class="mkt-pkg__tag badge ' + tagBadgeClass(p.tag) + '">' + esc(p.tag) + '</span>';
+      // media: реальное фото с onerror-фолбэком на брендовый градиент + emoji (data-emoji)
+      var mediaEl = g
+        ? '<div class="mkt-pkg__media" data-emoji="' + esc(p.emoji) + '">' + tagEl + '<img src="' + esc(g.src) +
+            '" alt="' + esc(p.name) + '" loading="lazy" ' +
+            'onerror="this.closest(\'.mkt-pkg__media\').classList.add(\'mkt-pkg__media--fallback\')"></div>'
+        : '<div class="mkt-pkg__media mkt-pkg__media--fallback" data-emoji="' + esc(p.emoji) + '">' + tagEl + '</div>';
+      var inc = p.includes.map(function (it) {
+        var sv = S.serviceById(it.service) || {};
+        return '<li><span class="ie" aria-hidden="true">' + (sv.emoji || '•') + '</span>' +
+          esc(it.label) + '</li>';
+      }).join('');
+      var old = p.oldPrice ? '<span class="mkt-pkg__old">' + money(p.oldPrice) + '</span>' : '';
+      return '<article class="mkt-pkg">' +
+        mediaEl +
+        '<div class="mkt-pkg__body">' +
+          '<span class="mkt-pkg__occ">' + esc(occ.name || '') + '</span>' +
+          '<h3 class="mkt-pkg__name">' + esc(p.name) + '</h3>' +
+          '<p class="mkt-pkg__desc">' + esc(p.desc) + '</p>' +
+          '<ul class="mkt-pkg__inc">' + inc + '</ul>' +
+          '<div class="mkt-pkg__foot">' +
+            '<div class="mkt-pkg__price">' +
+              '<span class="mkt-pkg__from">от</span>' +
+              '<span class="price price--big">' + money(p.price) + '</span>' + old +
+            '</div>' +
+            '<a class="btn btn--primary btn--block" href="pakety.html">Оформить</a>' +
+          '</div>' +
+        '</div>' +
+      '</article>';
+    }
+    var previewPkgs = P.packages.slice(0, 3);
+    document.getElementById('packageGrid').innerHTML = previewPkgs.map(pkgCard).join('');
+
+    /* ---------- УСЛУГИ-ТИЗЕР: 8 плиток ширины ---------- */
+    var teaserIds = ['balloons', 'desserts', 'flowers', 'photo', 'kidshow', 'decor', 'catering', 'cert'];
+    document.getElementById('serviceTeaser').innerHTML = teaserIds.map(function (id) {
+      var sv = S.serviceById(id) || {};
+      var isCore = sv.kind === 'core';
+      var tag = isCore ? '<span class="tag-core">ядро</span>'
+        : (sv.kind === 'own' ? '<span class="tag-agg">свой</span>' : '<span class="tag-agg">партнёр</span>');
+      return '<a class="home-svc__item' + (isCore ? ' home-svc__item--core' : '') + '" href="' + S.uslugiHref(id) + '">' +
+        '<div class="home-svc__top">' +
+          '<span class="home-svc__emoji" aria-hidden="true">' + (sv.emoji || '•') + '</span>' + tag +
+        '</div>' +
+        '<div class="home-svc__name">' + esc(sv.name || '') + '</div>' +
+        '<div class="home-svc__from">от ' + money(sv.from) + '</div></a>';
+    }).join('');
+
+    /* ---------- LOOKBOOK: масонри из реальных фото → карточка товара ---------- */
+    document.getElementById('lookbook').innerHTML =
+      (P.gallery || []).map(function (g) {
+        var prod = productForGallery(g);
+        var inner = S.mktPhoto(g, true);
+        if (!prod) return inner;
+        return '<a class="home-lookbook__link" href="' + S.tovarHref(prod.id) +
+          '" aria-label="' + esc(g.label || prod.name) + ' — к товару">' + inner + '</a>';
+      }).join('');
+
+    /* ---------- КАК РАБОТАЕТ: 4 шага ---------- */
+    var steps = [
+      { t: 'Оставляете заявку', d: 'Выбираете повод, дату и услуги. Шары уже внутри — добавляете остальное в один клик.' },
+      { t: 'Подбираем команду', d: 'У Pinkshar готовый спрос и проверенные подрядчики. Присылаем смету за час.' },
+      { t: 'Согласуете фото и платите', d: 'Подрядчик присылает макет оформления. Утверждаете — и платите один раз за всё, деньги в эскроу.' },
+      { t: 'Празднуете', d: 'Команда приезжает, всё оформляет и убирает после. Вы только встречаете гостей.' }
+    ];
+    document.getElementById('stepGrid').innerHTML = steps.map(function (s, i) {
+      return '<li class="mkt-step">' +
+        '<span class="mkt-step__n">' + (i + 1) + '</span>' +
+        '<div class="mkt-step__t">' + esc(s.t) + '</div>' +
+        '<p class="mkt-step__d">' + esc(s.d) + '</p></li>';
+    }).join('');
+
+    /* ---------- VISION-ТИЗЕР ---------- */
+    var vis = P.vision || {};
+    document.getElementById('manifesto').innerHTML =
+      '<p class="mkt-manifesto__text">' + (vis.manifesto || '') + '</p>';
+    document.getElementById('visionStats').innerHTML = (vis.stats || []).slice(0, 4).map(function (s) {
+      return '<div class="mkt-stat"><span class="mkt-stat__v">' + esc(s.kpi) + '</span>' +
+        '<span class="mkt-stat__l">' + esc(s.label) + '</span></div>';
+    }).join('');
+    document.getElementById('visionRoadmap').innerHTML = (vis.roadmap || []).map(function (r, i) {
+      return '<span class="home-vision__chip' + (i === 0 ? ' home-vision__chip--now' : '') + '">' +
+        '<span class="ph">' + esc(r.phase) + '</span>' +
+        '<span class="ti">' + esc(r.title) + '</span></span>';
+    }).join('');
+
+    /* ---------- ДВУСТОРОННОСТЬ: подрядчику ---------- */
+    var pi = P.partnerInfo || {};
+    document.getElementById('partnerPitch').textContent = pi.pitch || '';
+    document.getElementById('partnerBenefits').innerHTML = (pi.benefits || []).slice(0, 4).map(function (b) {
+      return '<li>' + esc(b) + '</li>';
+    }).join('');
+
+    /* ---------- ОТЗЫВЫ ---------- */
+    document.getElementById('reviewGrid').innerHTML = (P.testimonials || []).slice(0, 3).map(function (r) {
+      var ord = S.orderById(r.orderId);
+      var occ = ord ? (S.occasionById(ord.occasion) || {}) : {};
+      var name = ord ? ord.client : 'Клиент Pinkshar';
+      var stars = '';
+      for (var i = 0; i < (r.rating || 5); i++) stars += '★';
+      return '<article class="home-review">' +
+        '<div class="home-review__stars" aria-label="' + (r.rating || 5) + ' из 5">' + stars + '</div>' +
+        '<p class="home-review__text">' + esc(r.text) + '</p>' +
+        '<div class="home-review__who">' +
+          '<span class="avatar">' + esc(S.initials(name)) + '</span>' +
+          '<span>' +
+            '<span class="home-review__name">' + esc(name) + '</span><br>' +
+            '<span class="home-review__meta">' + esc(occ.name || 'Праздник') +
+              ' · ' + (ord ? S.dateShort(ord.date) : '') + '</span>' +
+          '</span>' +
+        '</div></article>';
+    }).join('');
+
+  };
+  </script>
+  <script src="assets/data.js?v=8"></script>
+  <script src="assets/shell.js?v=8"></script>
+</body>
+</html>

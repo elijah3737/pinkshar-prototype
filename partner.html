@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pinkshar — кабинет подрядчика</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="assets/app.css?v=8">
+</head>
+<body>
+  <header class="topbar" data-topbar></header>
+  <main id="view"></main>
+
+  <!-- page-scoped стили кабинета подрядчика -->
+  <style>
+    .pp-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s-5);
+      flex-wrap:wrap;margin-bottom:var(--s-5)}
+    .pp-hero__id{display:flex;align-items:center;gap:var(--s-4)}
+    .pp-hero h1{font-family:var(--font-display);font-weight:600;letter-spacing:-.02em}
+    .pp-hero__meta{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:6px;
+      font-size:13.5px;color:var(--muted)}
+    .pp-hero__meta .dotsep{width:3px;height:3px;border-radius:50%;background:var(--faint)}
+    .pp-demand{display:inline-flex;align-items:center;gap:8px;padding:5px 13px;
+      border-radius:var(--r-pill);background:var(--pink-ghost);border:1px solid var(--line);
+      font-size:13px;font-weight:600;color:var(--plum)}
+    .pp-demand b{font-family:var(--font-mono);color:var(--pink-strong)}
+
+    .pp-kpis{margin-bottom:var(--s-5)}
+    .pp-kpis .card{padding:var(--s-5) var(--s-5)}
+
+    .pp-tabs{margin-bottom:var(--s-5)}
+
+    /* список заявок / заказов */
+    .pp-list{display:flex;flex-direction:column;gap:var(--s-4)}
+    .pp-req__top{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s-4);
+      flex-wrap:wrap}
+    .pp-req__occ{display:flex;align-items:center;gap:12px}
+    .pp-req__emoji{font-size:26px;line-height:1}
+    .pp-req__title{font-weight:700;font-size:16px}
+    .pp-req__sub{font-size:13px;color:var(--muted);margin-top:2px}
+    .pp-req__budget{text-align:right}
+    .pp-req__budget .l{font-size:12px;color:var(--muted);font-weight:600}
+    .pp-need{margin-top:var(--s-4);padding:var(--s-3) var(--s-4);border-radius:var(--r-md);
+      background:var(--pink-ghost)}
+    .pp-need__l{font-size:12px;font-weight:600;color:var(--plum);margin-bottom:3px}
+    .pp-need__v{font-size:14px;font-weight:600}
+    .pp-meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+      gap:var(--s-3) var(--s-5);margin-top:var(--s-4)}
+    .pp-meta__l{font-size:12px;color:var(--muted);font-weight:600}
+    .pp-meta__v{font-size:14px;font-weight:600;margin-top:1px}
+    .pp-actions{display:flex;gap:var(--s-2);flex-wrap:wrap;margin-top:var(--s-4);
+      padding-top:var(--s-4);border-top:1px solid var(--line)}
+
+    /* активные: строка прогресса */
+    .pp-active__head{display:flex;align-items:center;justify-content:space-between;gap:var(--s-4);
+      flex-wrap:wrap}
+    .pp-steps{display:flex;align-items:center;gap:6px;margin-top:var(--s-4)}
+    .pp-step{flex:1;height:6px;border-radius:var(--r-pill);background:var(--line)}
+    .pp-step.done{background:var(--good)}
+    .pp-step.current{background:var(--pink)}
+    .pp-stepl{display:flex;justify-content:space-between;margin-top:8px;font-size:11.5px;
+      color:var(--muted);font-weight:600}
+
+    /* финансы */
+    .pp-fin-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:var(--s-5);align-items:start}
+    @media(max-width:860px){.pp-fin-grid{grid-template-columns:1fr}}
+    .pp-payout{display:flex;align-items:center;justify-content:space-between;gap:var(--s-4);
+      flex-wrap:wrap}
+    .pp-commission-note{display:flex;gap:10px;align-items:flex-start;font-size:13px;
+      color:var(--muted);margin-top:var(--s-3)}
+
+    /* витрина / профиль */
+    .pp-profile-grid{display:grid;grid-template-columns:1fr 1.3fr;gap:var(--s-5);align-items:start}
+    @media(max-width:860px){.pp-profile-grid{grid-template-columns:1fr}}
+    .pp-portfolio{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-3)}
+    .pp-std{display:flex;gap:12px;align-items:flex-start}
+    .pp-std__ic{width:30px;height:30px;border-radius:var(--r-pill);background:var(--good-soft);
+      color:var(--good);display:flex;align-items:center;justify-content:center;flex:none;
+      font-weight:700;font-size:15px}
+    .pp-std__t{font-weight:600;font-size:14px}
+    .pp-std__d{font-size:12.5px;color:var(--muted)}
+
+    /* календарь */
+    .pp-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+    .pp-cal__dow{font-size:11px;font-weight:600;color:var(--muted);text-align:center;
+      padding-bottom:4px}
+    .pp-day{aspect-ratio:1;border-radius:var(--r-sm);border:1px solid var(--line);
+      background:var(--card);display:flex;flex-direction:column;align-items:center;
+      justify-content:center;gap:3px;font-size:13px;font-weight:600;position:relative}
+    .pp-day.muted-day{color:var(--faint);background:var(--bg);border-color:transparent}
+    .pp-day.busy{background:var(--pink-ghost);border-color:var(--pink-soft);color:var(--plum)}
+    .pp-day.today{box-shadow:inset 0 0 0 2px var(--pink)}
+    .pp-day__dot{width:6px;height:6px;border-radius:50%;background:var(--pink)}
+    .pp-cal-legend{display:flex;gap:var(--s-5);margin-top:var(--s-4);font-size:12.5px;
+      color:var(--muted);flex-wrap:wrap}
+    .pp-cal-legend span{display:inline-flex;align-items:center;gap:7px;font-weight:600}
+    .pp-leg-dot{width:11px;height:11px;border-radius:3px}
+
+    .pp-chat-card{display:flex;flex-direction:column;height:min(620px,72vh)}
+    .pp-chat-scroll{flex:1;overflow-y:auto;padding:var(--s-5)}
+    .pp-chat-head{padding:var(--s-4) var(--s-5);border-bottom:1px solid var(--line);
+      display:flex;align-items:center;justify-content:space-between;gap:var(--s-4)}
+  </style>
+
+  <!-- data.js (PINK) → partner.page.js (объявляет window.renderPage) → shell.js.
+       shell.init() на DOMContentLoaded сам вызовет renderPage() и initTabs() —
+       ровно один раз, как на остальных страницах. Никакого bootstrap-скрипта. -->
+  <script src="assets/data.js?v=8"></script>
+  <script src="assets/shell.js?v=8"></script>
+  <script src="assets/partner.page.js?v=8"></script>
+</body>
+</html>

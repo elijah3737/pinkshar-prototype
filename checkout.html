@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Оформление заказа — Pinkshar</title>
+  <meta name="description" content="Оформление заказа Pinkshar: контакт, адрес, дата и слот, открытка, оплата СБП или картой. Деньги замораживаются в эскроу до выполнения.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="assets/app.css?v=8">
+</head>
+<body>
+  <div data-mkt-header></div>
+
+  <main id="view">
+    <!-- Чекаут: форма + сводка + экран подтверждения (.order-done). renderPage. -->
+    <div class="wrap page" data-checkout-root></div>
+  </main>
+
+  <footer data-mkt-footer></footer>
+
+  <script src="assets/data.js?v=8"></script>
+  <script src="assets/shell.js?v=8"></script>
+  <script>
+  /* ============================================================
+     ЧЕКАУТ — контакт+адрес/район+точка(плейсхолдер карты), дата+слот,
+     открытка, СБП/карта → эскроу → экран .order-done с номером заказа
+     и ссылкой в кабинет клиента. Без попапов; финал — inline-замена view.
+     ============================================================ */
+  window.renderPage = function () {
+    var S = window.SHELL, P = window.PINK;
+    var root = document.querySelector('[data-checkout-root]');
+    if (!root || !S) return;
+
+    var DELIVERY = 700;
+    var escrowIcon = '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">' +
+      '<path d="M9 1.5l6 2.2v4.1c0 3.7-2.5 6.4-6 7.7-3.5-1.3-6-4-6-7.7V3.7L9 1.5Z" stroke="currentColor" stroke-width="1.4"/>' +
+      '<path d="M6.2 9l1.9 1.9L12 6.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    var items = S.cartItems().filter(function (it) { return it.product; });
+    if (!items.length) {
+      root.innerHTML =
+        S.crumbs([{ label: 'Главная', href: 'index.html' }, { label: 'Корзина', href: 'korzina.html' }, { label: 'Оформление' }]) +
+        '<div class="empty"><div class="empty__icon">🛒</div><div class="empty__title">Корзина пуста</div>' +
+        '<p>Добавьте позиции, чтобы оформить заказ.</p>' +
+        '<div style="margin-top:16px"><a class="btn btn--primary" href="pakety.html">Собрать праздник</a></div></div>';
+      return;
+    }
+
+    var goods = S.cartTotal(), total = goods + DELIVERY;
+    var SLOTS = ['09:00–11:00', '11:00–13:00', '13:00–15:00', '15:00–17:00', '17:00–19:00', '19:00–21:00'];
+
+    // эмодзи категории товара (для фолбэка фото в сводке) — как в tovar.html
+    var SVC = P.serviceCatalog || [];
+    function svcEmoji(slug) {
+      var s = SVC.find(function (x) { return x.slug === slug || x.id === slug; });
+      return (s && s.emoji) || '🎈';
+    }
+    // число подрядчиков в чеке — для плашки «мультивендор»
+    var vendorIds = {};
+    items.forEach(function (it) { if (it.contractor) vendorIds[it.contractor.id] = 1; });
+    var vendorCount = Object.keys(vendorIds).length;
+
+    var crumbs = S.crumbs([
+      { label: 'Главная', href: 'index.html' },
+      { label: 'Корзина', href: 'korzina.html' },
+      { label: 'Оформление' }
+    ]);
+
+    function field(label, inputHTML) {
+      return '<div class="field"><label>' + S.esc(label) + '</label>' + inputHTML + '</div>';
+    }
+
+    var form =
+      '<form class="checkout__form" data-checkout-form novalidate>' +
+        // 1. контакт
+        '<div class="checkout-block">' +
+          '<div class="checkout-block__title"><span class="checkout-block__step">1</span>Контакт</div>' +
+          '<div class="checkout-grid">' +
+            field('Имя', '<input class="input" type="text" placeholder="Как к вам обращаться" required>') +
+            field('Телефон', '<input class="input" type="tel" inputmode="tel" placeholder="+7 ___ ___-__-__" required>') +
+          '</div>' +
+        '</div>' +
+        // 2. адрес
+        '<div class="checkout-block">' +
+          '<div class="checkout-block__title"><span class="checkout-block__step">2</span>Адрес и точка</div>' +
+          '<div class="checkout-grid">' +
+            field('Район', '<select class="select"><option>ЦАО</option><option>САО</option><option>СВАО</option><option>ВАО</option><option>ЮВАО</option><option>ЮАО</option><option>ЮЗАО</option><option>ЗАО</option><option>СЗАО</option></select>') +
+            field('Адрес', '<input class="input" type="text" placeholder="Улица, дом, кв." required>') +
+          '</div>' +
+          '<div class="checkout-map">Поставьте точку на карте · плейсхолдер карты Москвы (демо)</div>' +
+        '</div>' +
+        // 3. дата + слот
+        '<div class="checkout-block">' +
+          '<div class="checkout-block__title"><span class="checkout-block__step">3</span>Дата и время</div>' +
+          '<div class="checkout-grid">' +
+            field('Дата праздника', '<input class="input" type="date" min="2026-06-23" value="2026-06-28">') +
+            '<div></div>' +
+          '</div>' +
+          '<div class="field" style="margin-bottom:0"><label>Слот доставки</label>' +
+            '<div class="slots" data-slots>' + SLOTS.map(function (s, i) {
+              return '<button type="button" class="slot' + (i === 1 ? ' active' : '') + '" data-slot="' + S.esc(s) + '">' + S.esc(s) + '</button>';
+            }).join('') + '</div></div>' +
+        '</div>' +
+        // 4. открытка
+        '<div class="checkout-block">' +
+          '<div class="checkout-block__title"><span class="checkout-block__step">4</span>Открытка</div>' +
+          field('Текст поздравления (необязательно)', '<textarea class="textarea" rows="3" placeholder="Например: «С праздником! Пусть всё будет розово 🩷»"></textarea>') +
+        '</div>' +
+        // 5. оплата
+        '<div class="checkout-block">' +
+          '<div class="checkout-block__title"><span class="checkout-block__step">5</span>Оплата</div>' +
+          '<div class="pay-methods" data-pay>' +
+            '<label class="pay-method active" data-method="sbp"><span class="pay-method__radio"></span>' +
+              '<span><span class="pay-method__name">СБП</span><span class="pay-method__sub" style="display:block">Оплата по QR · мгновенно</span></span></label>' +
+            '<label class="pay-method" data-method="card"><span class="pay-method__radio"></span>' +
+              '<span><span class="pay-method__name">Банковская карта</span><span class="pay-method__sub" style="display:block">Visa · Mastercard · МИР</span></span></label>' +
+          '</div>' +
+        '</div>' +
+      '</form>';
+
+    // строка-позиция в сводке: мини-карточка в стиле tovar.html —
+    // фото с фолбэком + название (ссылка на tovar.html) + подрядчик + цена.
+    function summaryLine(it) {
+      var emoji = svcEmoji(it.product.categorySlug);
+      var photo = (it.product.photos && it.product.photos[0]) || '';
+      var href = S.tovarHref(it.product.id);
+      var sub = (it.contractor ? S.esc(it.contractor.name) : 'Pinkshar') +
+        (it.qty > 1 ? ' · ' + it.qty + ' шт' : '');
+      return '<div class="cart-line" style="padding:10px 0">' +
+        '<a class="cart-line__media' + (photo ? '' : ' cart-line__media--fallback') + '" ' +
+          'href="' + href + '" data-emoji="' + S.esc(emoji) + '" style="width:54px;height:54px" aria-label="' + S.esc(it.product.name) + '">' +
+          '<img src="' + S.esc(photo) + '" alt="' + S.esc(it.product.name) + '" loading="lazy" ' +
+            "onerror=\"this.closest('.cart-line__media').classList.add('cart-line__media--fallback')\">" +
+        '</a>' +
+        '<div class="cart-line__body">' +
+          '<div class="cart-line__name"><a href="' + href + '">' + S.esc(it.product.name) + '</a></div>' +
+          '<div class="cart-line__unit">' + sub + '</div>' +
+        '</div>' +
+        '<div class="cart-line__price" style="align-self:center">' + S.money(it.lineTotal) + '</div>' +
+      '</div>';
+    }
+
+    var vendorNote = vendorCount > 1 ?
+      '<div class="checkout-summary__line" style="color:var(--muted);font-size:12.5px;border:0;padding-top:0">' +
+        'Позиции от ' + vendorCount + ' подрядчиков · один чек, одна доставка</div>' : '';
+
+    var summary =
+      '<aside class="checkout-summary">' +
+        '<div class="cart-summary__title">Ваш заказ</div>' +
+        vendorNote +
+        '<div style="margin:4px 0 10px">' + items.map(summaryLine).join('') + '</div>' +
+        '<div class="checkout-summary__line" style="padding-top:10px;border-top:1px solid var(--line)"><span>Товары и услуги</span><span class="v">' + S.money(goods) + '</span></div>' +
+        '<div class="checkout-summary__line"><span>Доставка и монтаж</span><span class="v">' + S.money(DELIVERY) + '</span></div>' +
+        '<div class="cart-summary__total"><span class="l">К оплате</span><span class="v">' + S.money(total) + '</span></div>' +
+        '<button class="btn btn--primary btn--lg btn--block" data-pay-btn style="margin-top:8px">Оплатить через эскроу · ' + S.money(total) + '</button>' +
+        '<div class="cart-escrow">' + escrowIcon +
+          '<span>Деньги замораживаются в эскроу и переводятся подрядчикам только после выполнения.</span></div>' +
+        '<a class="btn btn--ghost btn--block" href="korzina.html" style="margin-top:8px">← Вернуться в корзину</a>' +
+      '</aside>';
+
+    root.innerHTML = crumbs +
+      '<h1 class="serif" style="font-size:30px;margin:8px 0 20px">Оформление заказа</h1>' +
+      '<div class="checkout">' + form + summary + '</div>';
+
+    /* слоты */
+    root.addEventListener('click', function (e) {
+      var slot = e.target.closest('[data-slot]');
+      if (slot) { root.querySelectorAll('[data-slot]').forEach(function (s) { s.classList.toggle('active', s === slot); }); return; }
+      var pm = e.target.closest('[data-method]');
+      if (pm) { root.querySelectorAll('[data-method]').forEach(function (m) { m.classList.toggle('active', m === pm); }); return; }
+    });
+
+    /* оплатить → экран подтверждения (.order-done) */
+    var payBtn = root.querySelector('[data-pay-btn]');
+    if (payBtn) payBtn.addEventListener('click', function () {
+      var orderNum = 'PS-' + (2623 + Math.floor(Math.random() * 70));
+      S.cartClear();
+      root.innerHTML =
+        '<div class="order-done">' +
+          '<div class="order-done__icon"><svg width="34" height="34" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>' +
+          '<div class="order-done__title">Заказ оформлен</div>' +
+          '<div class="order-done__num">№ ' + orderNum + '</div>' +
+          '<p class="order-done__text">Оплата ' + S.money(total) + ' заморожена в эскроу' +
+            (vendorCount > 1 ? ' и распределена между ' + vendorCount + ' подрядчиками' : '') +
+            '. Деньги уйдут исполнителям только после выполнения. Мы отправили детали и открытку — следите за статусом в кабинете клиента.</p>' +
+          '<div class="order-done__cta">' +
+            '<a class="btn btn--primary btn--lg" href="client.html">В кабинет клиента</a>' +
+            '<a class="btn btn--ghost btn--lg" href="index.html">На главную</a>' +
+          '</div>' +
+        '</div>';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  };
+  </script>
+</body>
+</html>

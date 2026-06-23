@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Товар — Pinkshar</title>
+  <meta name="description" content="Карточка товара Pinkshar: галерея, что входит, характеристики, подрядчик, отзывы. Оплата защищена в эскроу до выполнения.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="assets/app.css?v=8">
+</head>
+<body>
+  <!-- демо-бар + sticky-хедер с мегаменю + мобменю (рендерит shell.js) -->
+  <div data-mkt-header></div>
+
+  <main id="view">
+    <!-- Карточка товара (PDP). Рендерит window.renderPage из window.PINK.products по ?id=. -->
+    <div class="wrap" data-pdp-root></div>
+  </main>
+
+  <footer data-mkt-footer></footer>
+
+  <script src="assets/data.js?v=8"></script>
+  <script src="assets/shell.js?v=8"></script>
+  <script>
+  /* ============================================================
+     PDP — карточка товара. Читает ?id=, ищет в PINK.products.
+     Нет id / не найден → первый товар + ссылка «ко всем услугам».
+     Drill-in навигацией, без попапов. CTA «В корзину» → S.addToCart.
+     ============================================================ */
+  window.renderPage = function () {
+    var S = window.SHELL, P = window.PINK;
+    var root = document.querySelector('[data-pdp-root]');
+    if (!root || !S || !P) return;
+
+    var products = P.products || [];
+    var id = S.qparam('id');
+    var prod = id && P.productById ? P.productById(id) : null;
+    var notFound = false;
+
+    // фолбэк: id нет/не найден → первый товар, но с подсказкой «ко всем услугам»
+    if (!prod) { notFound = !!id; prod = products[0]; }
+    if (!prod) {
+      root.innerHTML =
+        S.crumbs([{ label: 'Главная', href: 'index.html' }, { label: 'Товар' }]) +
+        '<div class="empty"><div class="empty__icon">🎈</div>' +
+        '<div class="empty__title">Товар не найден</div>' +
+        '<p>Откройте товар из листинга услуги.</p>' +
+        '<div style="margin-top:16px"><a class="btn btn--primary" href="uslugi.html">Все услуги</a></div></div>';
+      return;
+    }
+
+    var svc = (P.serviceCatalog || []).find(function (s) { return s.slug === prod.categorySlug; }) || {};
+    var svcName = svc.name || (S.serviceById && S.serviceById(prod.categorySlug) ? S.serviceById(prod.categorySlug).name : 'Услуга');
+    var svcEmoji = svc.emoji || '🎈';
+    var contractor = S.contractorById ? S.contractorById(prod.contractorId) : null;
+    var isFrom = prod.priceType === 'from';
+    document.title = prod.name + ' — Pinkshar';
+
+    /* ---- хелперы ---- */
+    function photoObj(src) { return { src: src, label: prod.name, emoji: svcEmoji }; }
+    function starsLine(r) {
+      var full = Math.round(r || 0), out = '';
+      for (var i = 0; i < 5; i++) out += i < full ? '★' : '☆';
+      return out;
+    }
+    function ratingText(r) { return (r || 0).toFixed(1).replace('.', ','); }
+
+    var photos = (prod.photos && prod.photos.length) ? prod.photos : [''];
+
+    /* ---- крошки ---- */
+    var crumbs = S.crumbs([
+      { label: 'Главная', href: 'index.html' },
+      { label: 'Услуги', href: 'uslugi.html' },
+      { label: svcName, href: S.uslugiHref(prod.categorySlug) },
+      { label: prod.name }
+    ]);
+
+    /* ---- ГАЛЕРЕЯ (слева) ---- */
+    var mainPhoto =
+      '<div class="pdp-gallery__main' + (photos[0] ? '' : ' pdp-gallery__main--fallback') + '" data-emoji="' + S.esc(svcEmoji) + '" data-gallery-main>' +
+        '<img src="' + S.esc(photos[0] || '') + '" alt="' + S.esc(prod.name) + '" ' +
+          "onerror=\"this.closest('.pdp-gallery__main').classList.add('pdp-gallery__main--fallback')\">" +
+      '</div>';
+    var thumbs = photos.length > 1 ? '<div class="pdp-gallery__thumbs">' + photos.map(function (src, i) {
+      return '<button type="button" class="pdp-gallery__thumb' + (i === 0 ? ' active' : '') + '" data-thumb="' + i + '" aria-label="Фото ' + (i + 1) + '">' +
+        '<img src="' + S.esc(src) + '" alt="" onerror="this.style.display=\'none\'">' +
+        '</button>';
+    }).join('') + '</div>' : '';
+    var gallery = '<div class="pdp-gallery">' + mainPhoto + thumbs + '</div>';
+
+    /* ---- эскроу-иконка ---- */
+    var escrowIcon = '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">' +
+      '<path d="M9 1.5l6 2.2v4.1c0 3.7-2.5 6.4-6 7.7-3.5-1.3-6-4-6-7.7V3.7L9 1.5Z" stroke="currentColor" stroke-width="1.4"/>' +
+      '<path d="M6.2 9l1.9 1.9L12 6.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    /* ---- ПРАВАЯ КОЛОНКА: pdp-buy (sticky) ---- */
+    var partnerMini = contractor ?
+      '<a class="pdp-partner" href="' + S.partnerHref(contractor.id) + '">' +
+        '<span class="avatar avatar--plum">' + S.esc(S.initials(contractor.name)) + '</span>' +
+        '<span class="pdp-partner__body">' +
+          '<span class="pdp-partner__name">' + S.esc(contractor.name) + '</span>' +
+          '<span class="pdp-partner__sub">' + ratingText(contractor.rating) + ' ★ · ' + (contractor.orders || 0) + ' заказов</span>' +
+          '<span class="pdp-partner__badge">' + escrowIcon + ' Проверен · работает через эскроу</span>' +
+        '</span>' +
+      '</a>' : '';
+
+    var buy =
+      '<aside class="pdp-buy">' +
+        '<div class="pdp-buy__cat">' + S.esc(svcEmoji + ' ' + svcName) + '</div>' +
+        '<h1 class="pdp-buy__title">' + S.esc(prod.name) + '</h1>' +
+        '<div class="pdp-buy__meta">' +
+          '<span class="pdp-buy__rating"><span class="star">★</span> ' + ratingText(prod.rating) + '</span>' +
+          '<span>·</span><span>' + (prod.reviewsCount || 0) + ' отзывов</span>' +
+        '</div>' +
+        '<div class="pdp-buy__price">' +
+          (isFrom ? '<span class="pdp-buy__from">от</span>' : '') +
+          '<span class="pdp-buy__amount">' + S.money(prod.price) + '</span>' +
+          (prod.oldPrice ? '<span class="pdp-buy__old">' + S.money(prod.oldPrice) + '</span>' : '') +
+        '</div>' +
+        '<div class="pdp-escrow">' + escrowIcon +
+          '<span>Оплата защищена в эскроу до праздника. Если подрядчик подведёт — вернём деньги.</span>' +
+        '</div>' +
+        '<div class="pdp-buy__cta">' +
+          '<button class="btn btn--primary btn--lg btn--block" data-add-to-cart>' +
+            (isFrom ? 'Добавить в заявку' : 'В корзину') + '</button>' +
+          '<button class="btn btn--ghost btn--block" type="button" data-quick-toggle aria-expanded="false">Быстрая заявка</button>' +
+        '</div>' +
+        '<div class="pdp-quick" data-quick hidden>' +
+          '<p class="muted" style="font-size:13px;margin:0 0 10px">Оставьте телефон — менеджер Pinkshar перезвонит и поможет собрать заказ.</p>' +
+          '<div class="field" style="margin-bottom:10px">' +
+            '<input class="input" type="tel" inputmode="tel" placeholder="+7 ___ ___-__-__" data-quick-phone aria-label="Телефон">' +
+          '</div>' +
+          '<button class="btn btn--soft btn--block" type="button" data-quick-send>Жду звонка</button>' +
+        '</div>' +
+        partnerMini +
+      '</aside>';
+
+    /* ---- СЕКЦИИ (под левой колонкой) ---- */
+    // что входит
+    var included = (prod.included && prod.included.length) ?
+      '<section class="pdp-section">' +
+        '<h2 class="pdp-section__title">Что входит</h2>' +
+        '<ul class="pdp-included">' + prod.included.map(function (x) {
+          return '<li>' + S.esc(x) + '</li>';
+        }).join('') + '</ul>' +
+      '</section>' : '';
+
+    // характеристики
+    var attrKeys = prod.attributes ? Object.keys(prod.attributes) : [];
+    var attrs = attrKeys.length ?
+      '<section class="pdp-section">' +
+        '<h2 class="pdp-section__title">Характеристики</h2>' +
+        '<div class="pdp-attrs">' + attrKeys.map(function (k) {
+          return '<div class="pdp-attr"><span class="pdp-attr__k">' + S.esc(k) + '</span>' +
+            '<span class="pdp-attr__v">' + S.esc(prod.attributes[k]) + '</span></div>';
+        }).join('') + '</div>' +
+      '</section>' : '';
+
+    // подрядчик (развёрнутый блок-ответвление)
+    var partnerSection = contractor ?
+      '<section class="pdp-section">' +
+        '<h2 class="pdp-section__title">Подрядчик</h2>' +
+        '<a class="pdp-partner" href="' + S.partnerHref(contractor.id) + '" style="max-width:520px">' +
+          '<span class="avatar avatar--plum">' + S.esc(S.initials(contractor.name)) + '</span>' +
+          '<span class="pdp-partner__body">' +
+            '<span class="pdp-partner__name">' + S.esc(contractor.name) + ' →</span>' +
+            '<span class="pdp-partner__sub">' + ratingText(contractor.rating) + ' ★ · ' +
+              (contractor.reviews || 0) + ' отзывов · ' + (contractor.orders || 0) + ' заказов</span>' +
+            '<span class="pdp-partner__badge">' + escrowIcon + ' Проверен · работает через эскроу</span>' +
+          '</span>' +
+        '</a>' +
+      '</section>' : '';
+
+    // отзывы с фото
+    var reviews = (prod.reviews && prod.reviews.length) ?
+      '<section class="pdp-section">' +
+        '<h2 class="pdp-section__title">Отзывы · ' + (prod.reviewsCount || prod.reviews.length) + '</h2>' +
+        '<div class="reviews">' + prod.reviews.map(function (rv) {
+          var photo = rv.photo ?
+            '<div class="review__photo"><img src="' + S.esc(rv.photo) + '" alt="" ' +
+              "onerror=\"this.closest('.review__photo').style.display='none'\"></div>" : '';
+          return '<article class="review">' +
+            '<div class="review__main">' +
+              '<div class="review__head">' +
+                '<span class="review__author">' + S.esc(rv.author) + '</span>' +
+                '<span class="review__stars" aria-label="Оценка ' + rv.rating + ' из 5">' + starsLine(rv.rating) + '</span>' +
+              '</div>' +
+              '<p class="review__text">' + S.esc(rv.text) + '</p>' +
+            '</div>' + photo +
+          '</article>';
+        }).join('') + '</div>' +
+      '</section>' : '';
+
+    // с этим часто заказывают: та же категория (без текущего) + добор смежными
+    var related = products.filter(function (p) {
+      return p.categorySlug === prod.categorySlug && p.id !== prod.id;
+    });
+    if (related.length < 4) {
+      var occ = prod.occasions || [];
+      products.forEach(function (p) {
+        if (related.length >= 4) return;
+        if (p.id === prod.id || related.indexOf(p) !== -1) return;
+        if (p.occasions && p.occasions.some(function (o) { return occ.indexOf(o) !== -1; })) related.push(p);
+      });
+    }
+    related = related.slice(0, 4);
+    function relCard(p) {
+      var ph = (p.photos && p.photos[0]) || '';
+      var pIsFrom = p.priceType === 'from';
+      var pc = S.contractorById ? S.contractorById(p.contractorId) : null;
+      return '<a class="prod-card" href="' + S.tovarHref(p.id) + '">' +
+        '<div class="prod-card__media' + (ph ? '' : ' prod-card__media--fallback') + '" data-emoji="' + S.esc(svcEmoji) + '">' +
+          '<img src="' + S.esc(ph) + '" alt="' + S.esc(p.name) + '" loading="lazy" ' +
+            "onerror=\"this.closest('.prod-card__media').classList.add('prod-card__media--fallback')\">" +
+          (p.oldPrice ? '<span class="prod-card__sale">−' + Math.round((1 - p.price / p.oldPrice) * 100) + '%</span>' : '') +
+        '</div>' +
+        '<div class="prod-card__body">' +
+          '<div class="prod-card__name">' + S.esc(p.name) + '</div>' +
+          '<div class="prod-card__meta">' +
+            '<span class="prod-card__rating"><span class="star">★</span> ' + ratingText(p.rating) + '</span>' +
+            '<span>·</span><span>' + (p.reviewsCount || 0) + '</span>' +
+          '</div>' +
+          (pc ? '<div class="prod-card__partner">' + S.esc(pc.name) + '</div>' : '') +
+          '<div class="prod-card__foot"><div class="prod-card__price">' +
+            (pIsFrom ? '<span class="prod-card__from">от</span>' : '') +
+            '<span class="prod-card__amount">' + S.money(p.price) + '</span>' +
+            (p.oldPrice ? '<span class="prod-card__old">' + S.money(p.oldPrice) + '</span>' : '') +
+          '</div></div>' +
+        '</div>' +
+      '</a>';
+    }
+    var relatedSection = related.length ?
+      '<section class="pdp-section pdp-related">' +
+        '<h2 class="pdp-section__title">С этим часто заказывают</h2>' +
+        '<div class="prod-grid">' + related.map(relCard).join('') + '</div>' +
+      '</section>' : '';
+
+    /* ---- подсказка при фолбэке (битый id) ---- */
+    var fallbackNote = notFound ?
+      '<div class="empty" style="padding:16px;text-align:left;background:var(--pink-ghost);border-radius:var(--r-md);margin-bottom:8px">' +
+        '<p style="margin:0">Товар по ссылке не найден — показываем популярную позицию. ' +
+        '<a href="uslugi.html" style="color:var(--pink-strong);font-weight:600">Ко всем услугам →</a></p>' +
+      '</div>' : '';
+
+    /* ---- СБОРКА ---- */
+    root.innerHTML =
+      crumbs + fallbackNote +
+      '<div class="pdp">' +
+        '<div class="pdp__left">' + gallery + '</div>' +
+        buy +
+      '</div>' +
+      '<div class="pdp__sections">' +
+        included + attrs + partnerSection + reviews + relatedSection +
+      '</div>';
+
+    /* ============ ИНТЕРАКТИВ ============ */
+    // переключение миниатюр галереи
+    var mainEl = root.querySelector('[data-gallery-main]');
+    var mainImg = mainEl ? mainEl.querySelector('img') : null;
+    root.querySelectorAll('[data-thumb]').forEach(function (t) {
+      t.addEventListener('click', function () {
+        var i = parseInt(t.getAttribute('data-thumb'), 10);
+        if (!mainEl || !mainImg) return;
+        mainEl.classList.remove('pdp-gallery__main--fallback');
+        mainImg.style.display = '';
+        mainImg.src = photos[i] || '';
+        root.querySelectorAll('[data-thumb]').forEach(function (x) { x.classList.toggle('active', x === t); });
+      });
+    });
+
+    // «В корзину» / «Добавить в заявку» → S.addToCart, инлайн-подтверждение (без попапа)
+    var addBtn = root.querySelector('[data-add-to-cart]');
+    if (addBtn) {
+      var addLabel = addBtn.textContent;
+      var addTimer = null;
+      addBtn.addEventListener('click', function () {
+        S.addToCart(prod.id, 1);          // обновит бейдж в шапке автоматически
+        addBtn.textContent = 'Добавлено ✓';
+        addBtn.classList.add('btn--soft');
+        addBtn.classList.remove('btn--primary');
+        clearTimeout(addTimer);
+        addTimer = setTimeout(function () {
+          addBtn.textContent = addLabel;
+          addBtn.classList.add('btn--primary');
+          addBtn.classList.remove('btn--soft');
+        }, 1800);
+      });
+    }
+
+    // «Быстрая заявка» — инлайн-панель (НЕ попап)
+    var quickBtn = root.querySelector('[data-quick-toggle]');
+    var quickPanel = root.querySelector('[data-quick]');
+    if (quickBtn && quickPanel) {
+      quickBtn.addEventListener('click', function () {
+        var open = quickPanel.hasAttribute('hidden');
+        if (open) { quickPanel.removeAttribute('hidden'); quickBtn.setAttribute('aria-expanded', 'true'); }
+        else { quickPanel.setAttribute('hidden', ''); quickBtn.setAttribute('aria-expanded', 'false'); }
+      });
+      var sendBtn = root.querySelector('[data-quick-send]');
+      var phone = root.querySelector('[data-quick-phone]');
+      if (sendBtn) sendBtn.addEventListener('click', function () {
+        quickPanel.innerHTML = '<div class="pdp-escrow" style="margin:0">' + escrowIcon +
+          '<span>Заявка принята' + (phone && phone.value ? ' · ' + S.esc(phone.value) : '') +
+          '. Менеджер Pinkshar перезвонит в течение 15 минут.</span></div>';
+      });
+    }
+  };
+  </script>
+</body>
+</html>

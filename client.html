@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pinkshar — кабинет клиента</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="assets/app.css?v=8">
+</head>
+<body>
+  <header class="topbar" data-topbar></header>
+  <main id="view">
+    <!-- FILL: Клиент — мои заказы, отслеживание статуса (timeline + эскроу), детали заказа в drawer, чат с подрядчиком/платформой -->
+    <style>
+      /* page-scoped: префикс .cl-* — мелкие специфичные стили кабинета клиента */
+      .cl-shell{display:grid;grid-template-columns:240px 1fr;gap:var(--s-6);align-items:start}
+      .cl-nav{position:sticky;top:calc(var(--topbar-h) + var(--s-5));display:flex;flex-direction:column;gap:2px}
+      .cl-nav a{display:flex;align-items:center;gap:11px;padding:9px 13px;border-radius:var(--r-md);
+        font-weight:600;font-size:14px;color:var(--muted);transition:background .15s ease,color .15s ease}
+      .cl-nav a:hover{background:var(--pink-ghost);color:var(--ink)}
+      .cl-nav a.active{background:var(--pink-soft);color:var(--plum)}
+      .cl-nav a .cl-nav__ic{font-size:16px;line-height:1;width:18px;text-align:center}
+      .cl-nav a .cl-nav__c{margin-left:auto;font-family:var(--font-mono);font-size:11.5px;font-weight:600;
+        background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:var(--r-pill);
+        min-width:20px;height:18px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center}
+      .cl-nav a.active .cl-nav__c{background:var(--pink);border-color:var(--pink);color:#fff}
+      .cl-hello{margin-bottom:var(--s-5)}
+      .cl-hello h1{font-family:var(--font-display);font-weight:600}
+      .cl-hello h1 .dot{color:var(--pink)}
+      .cl-hello .cl-hello__sub{color:var(--muted);margin:var(--s-1) 0 0;font-size:15px}
+      /* единый отступ заголовка секции — по шкале --s-* вместо инлайнов */
+      .cl-sec-h{margin-bottom:var(--s-4)}
+      .cl-sec-h--tight{margin-bottom:var(--s-1)}
+
+      /* список заказов */
+      .cl-orders{display:grid;gap:var(--s-4)}
+      .cl-order{cursor:pointer;transition:transform .12s ease,box-shadow .15s ease}
+      .cl-order:hover{transform:translateY(-2px);box-shadow:var(--sh-pop)}
+      .cl-order__top{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s-4)}
+      .cl-order__emoji{font-size:30px;line-height:1}
+      .cl-order__name{font-family:var(--font-display);font-size:18px;font-weight:600;line-height:1.2}
+      .cl-order__meta{display:flex;flex-wrap:wrap;gap:14px;margin-top:7px;font-size:13px;color:var(--muted)}
+      .cl-order__meta .cl-mono{font-family:var(--font-mono);color:var(--ink)}
+      .cl-order__svc{display:flex;flex-wrap:wrap;gap:7px;margin-top:var(--s-4)}
+      .cl-svc-chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;
+        border-radius:var(--r-pill);background:var(--bg);border:1px solid var(--line);
+        font-size:12.5px;font-weight:600;color:var(--ink)}
+      .cl-svc-chip .em{font-size:14px;line-height:1}
+      .cl-order__foot{display:flex;align-items:center;justify-content:space-between;gap:var(--s-4);
+        margin-top:var(--s-4);padding-top:var(--s-4);border-top:1px solid var(--line)}
+      .cl-pay-line{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--muted)}
+
+      /* drawer — детали заказа */
+      .cl-d-row{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);padding:11px 0}
+      .cl-d-svc{display:flex;align-items:flex-start;gap:11px}
+      .cl-d-svc__em{font-size:20px;line-height:1.2;flex:none;width:24px;text-align:center}
+      .cl-d-svc__name{font-weight:600;font-size:14px}
+      .cl-d-svc__by{font-size:12.5px;color:var(--muted);margin-top:2px}
+      .cl-esc{display:flex;gap:11px;background:var(--pink-ghost);border:1px solid var(--paper-edge);
+        border-radius:var(--r-md);padding:13px 14px;font-size:13px;color:var(--plum);line-height:1.5}
+      .cl-esc__ic{font-size:18px;line-height:1.3;flex:none}
+      .cl-total{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s-3)}
+      .cl-total__sum{font-family:var(--font-mono);font-weight:600;font-size:24px;letter-spacing:-.02em}
+
+      /* чат */
+      .cl-chat-wrap{display:grid;grid-template-columns:248px 1fr;gap:0;min-height:560px}
+      .cl-thread-list{border-right:1px solid var(--line);display:flex;flex-direction:column}
+      .cl-thread{display:flex;gap:11px;padding:13px 16px;cursor:pointer;text-align:left;width:100%;
+        border-bottom:1px solid var(--line);transition:background .12s ease}
+      .cl-thread:hover{background:var(--pink-ghost)}
+      .cl-thread.active{background:var(--pink-soft)}
+      .cl-thread__name{font-weight:600;font-size:13.5px;line-height:1.25}
+      .cl-thread__last{font-size:12px;color:var(--muted);margin-top:3px;display:-webkit-box;
+        -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+      .cl-thread__id{font-family:var(--font-mono);font-size:10.5px;color:var(--pink-strong);font-weight:500}
+      .cl-chat-main{display:flex;flex-direction:column}
+      .cl-chat-head{display:flex;align-items:center;gap:11px;padding:14px 18px;border-bottom:1px solid var(--line)}
+      .cl-chat-scroll{flex:1;overflow-y:auto;padding:var(--s-5) var(--s-5) var(--s-3);max-height:430px}
+      .cl-quick{display:flex;flex-wrap:wrap;gap:7px;padding:0 var(--s-4) var(--s-3)}
+      .cl-quick button{height:30px;padding:0 12px;border-radius:var(--r-pill);background:var(--card);
+        border:1px solid var(--line);font-size:12.5px;font-weight:600;color:var(--plum);transition:all .15s ease}
+      .cl-quick button:hover{background:var(--pink-soft);border-color:var(--pink-soft)}
+      .cl-attach-img{display:flex;align-items:center;gap:10px;margin-top:7px;padding:9px 11px;border-radius:var(--r-sm);
+        background:rgba(27,19,24,.05);font-size:12.5px;font-weight:600;width:100%;border:0;cursor:pointer;
+        color:inherit;text-align:left;transition:background .15s ease}
+      .cl-attach-img:hover{background:rgba(27,19,24,.09)}
+      .cl-attach-img .cl-attach-thumb{width:38px;height:38px;border-radius:6px;flex:none;
+        background:linear-gradient(135deg,var(--pink-soft),var(--pink-ghost));display:flex;align-items:center;
+        justify-content:center;font-size:18px}
+
+      /* напоминания */
+      .cl-rem{display:flex;align-items:center;gap:var(--s-4);padding:var(--s-4) 0}
+      .cl-rem__date{flex:none;width:62px;text-align:center}
+      .cl-rem__day{font-family:var(--font-mono);font-size:24px;font-weight:600;line-height:1;color:var(--plum)}
+      .cl-rem__mon{font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;
+        letter-spacing:.04em;margin-top:3px}
+      .cl-rem__body{flex:1;min-width:0}
+      .cl-rem__who{font-weight:600;font-size:15px}
+      .cl-rem__what{font-size:13px;color:var(--muted);margin-top:2px}
+      .cl-rem__sep{width:1px;align-self:stretch;background:var(--line)}
+
+      /* лайтбокс вложения — плейсхолдер картинки */
+      .cl-light-stage{aspect-ratio:4/3;border-radius:var(--r-md);display:flex;align-items:center;
+        justify-content:center;font-size:56px;background:linear-gradient(135deg,var(--pink-soft),var(--pink-ghost));
+        border:1px solid var(--paper-edge)}
+
+      /* профиль */
+      .cl-profile-head{display:flex;align-items:center;gap:var(--s-4)}
+      .cl-fields-2{display:grid;grid-template-columns:1fr 1fr;gap:0 var(--s-4)}
+
+      @media (max-width:860px){
+        .cl-shell{grid-template-columns:1fr}
+        .cl-nav{position:static;flex-direction:row;overflow-x:auto;gap:var(--s-2);padding-bottom:var(--s-2)}
+        .cl-nav a{white-space:nowrap}
+        .cl-nav a .cl-nav__c{display:none}
+        .cl-chat-wrap{grid-template-columns:1fr}
+        .cl-thread-list{border-right:0;border-bottom:1px solid var(--line);flex-direction:row;overflow-x:auto}
+        .cl-thread{min-width:210px;border-bottom:0;border-right:1px solid var(--line)}
+        .cl-fields-2{grid-template-columns:1fr}
+      }
+    </style>
+
+    <div class="wrap page">
+      <div class="cl-hello between">
+        <div>
+          <h1>Привет, Екатерина<span class="dot">.</span></h1>
+          <p class="cl-hello__sub" data-cl-hello-sub>Готовим ваш праздник вместе с Pinkshar.</p>
+        </div>
+        <a class="btn btn--primary" href="index.html">Собрать праздник</a>
+      </div>
+
+      <div class="cl-shell">
+        <!-- ЛЕВАЯ НАВИГАЦИЯ -->
+        <nav class="cl-nav" data-tabs aria-label="Разделы кабинета">
+          <a data-tab="orders" class="active" role="button" tabindex="0">
+            <span class="cl-nav__ic">🎈</span>Мои праздники<span class="cl-nav__c" data-cl-c-orders>0</span></a>
+          <a data-tab="chat" role="button" tabindex="0">
+            <span class="cl-nav__ic">💬</span>Чат<span class="cl-nav__c" data-cl-c-chat>0</span></a>
+          <a data-tab="pay" role="button" tabindex="0">
+            <span class="cl-nav__ic">💳</span>Оплаты</a>
+          <a data-tab="rem" role="button" tabindex="0">
+            <span class="cl-nav__ic">🔔</span>Напоминания</a>
+          <a data-tab="profile" role="button" tabindex="0">
+            <span class="cl-nav__ic">👤</span>Профиль</a>
+        </nav>
+
+        <!-- КОНТЕНТ -->
+        <div>
+          <!-- ===== МОИ ПРАЗДНИКИ ===== -->
+          <section data-panel="orders">
+            <div class="between" style="margin-bottom:var(--s-4)">
+              <h2>Мои праздники</h2>
+              <div class="segmented" data-cl-filter>
+                <button class="active" data-cl-f="all">Все</button>
+                <button data-cl-f="active">Активные</button>
+                <button data-cl-f="done">Завершённые</button>
+              </div>
+            </div>
+            <div class="cl-orders" data-cl-orders></div>
+            <div class="cl-orders hide" data-cl-orders-empty>
+              <div class="card empty">
+                <div class="empty__icon">🎈</div>
+                <div class="empty__title">Пока ничего нет в этой вкладке</div>
+                <p>Когда появятся праздники с таким статусом, они покажутся здесь.</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- ===== ЧАТ ===== -->
+          <section data-panel="chat" class="hide">
+            <h2 class="cl-sec-h">Чат по заказам</h2>
+            <div class="card card--flush">
+              <div class="cl-chat-wrap" data-cl-chat></div>
+            </div>
+          </section>
+
+          <!-- ===== ОПЛАТЫ ===== -->
+          <section data-panel="pay" class="hide">
+            <div class="between" style="margin-bottom:var(--s-4)">
+              <h2>Оплаты и эскроу</h2>
+            </div>
+            <div class="stat-grid" style="margin-bottom:var(--s-5)" data-cl-paystats></div>
+            <div class="card card--flush">
+              <div class="card__head" style="padding:var(--s-5) var(--s-5) 0;margin-bottom:0">
+                <div class="card__title">История платежей</div>
+              </div>
+              <div class="table-wrap" data-cl-paytable></div>
+            </div>
+            <div class="cl-esc" style="margin-top:var(--s-5)">
+              <span class="cl-esc__ic">🛡️</span>
+              <div class="measure">
+                <strong>Как работает эскроу.</strong> Pinkshar придержит вашу оплату на защищённом
+                счёте до выполнения заказа, затем переведёт деньги подрядчику за вычетом комиссии.
+                Если что-то пойдёт не так — вернём средства.
+              </div>
+            </div>
+          </section>
+
+          <!-- ===== НАПОМИНАНИЯ ===== -->
+          <section data-panel="rem" class="hide">
+            <h2 class="cl-sec-h--tight">Напоминания о важных датах</h2>
+            <p class="muted measure" style="margin-bottom:var(--s-5)">
+              Добавьте дни рождения близких — за неделю напомним и подберём пакет под повод,
+              чтобы вы успели собрать праздник без спешки.
+            </p>
+            <div class="card card--flush">
+              <div class="divide" style="padding:var(--s-2) var(--s-5)" data-cl-rem></div>
+            </div>
+            <div class="row gap" style="margin-top:var(--s-4)">
+              <button class="btn btn--soft" data-open="#cl-add-date">Добавить дату</button>
+            </div>
+          </section>
+
+          <!-- ===== ПРОФИЛЬ ===== -->
+          <section data-panel="profile" class="hide">
+            <h2 class="cl-sec-h">Профиль</h2>
+            <div class="card" data-cl-profile></div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <!-- DRAWER: детали заказа -->
+    <aside class="drawer" id="cl-order-drawer" aria-label="Детали заказа">
+      <div class="drawer__head">
+        <div>
+          <div class="kicker" data-cl-d-id>PS-0000</div>
+          <h3 data-cl-d-name style="margin-top:2px">Заказ</h3>
+        </div>
+        <button class="icon-btn" data-close aria-label="Закрыть">✕</button>
+      </div>
+      <div class="drawer__body" data-cl-d-body></div>
+    </aside>
+
+    <!-- MODAL: оплата (эскроу) -->
+    <div class="modal" id="cl-pay-modal" aria-label="Оплата заказа">
+      <div class="modal__head">
+        <h3 data-cl-pay-title>Оплата заказа</h3>
+        <button class="icon-btn" data-close aria-label="Закрыть">✕</button>
+      </div>
+      <div class="modal__body" data-cl-pay-body></div>
+    </div>
+
+    <!-- MODAL: добавить дату -->
+    <div class="modal" id="cl-add-date" aria-label="Добавить важную дату">
+      <div class="modal__head">
+        <h3>Новая важная дата</h3>
+        <button class="icon-btn" data-close aria-label="Закрыть">✕</button>
+      </div>
+      <div class="modal__body">
+        <div class="field">
+          <label for="cl-rem-who">Кого поздравляем</label>
+          <input class="input" id="cl-rem-who" placeholder="Например, мама — Ольга">
+        </div>
+        <div class="field">
+          <label for="cl-rem-date">Дата</label>
+          <input class="input" id="cl-rem-date" type="date" value="2026-08-14">
+        </div>
+        <div class="field">
+          <label for="cl-rem-occ">Повод</label>
+          <select class="select" id="cl-rem-occ"></select>
+          <span class="hint">За неделю до даты пришлём напоминание и подборку пакета.</span>
+        </div>
+        <div class="row gap" style="justify-content:flex-end;margin-top:var(--s-2)">
+          <button class="btn btn--ghost" data-close>Отмена</button>
+          <button class="btn btn--primary" data-cl-rem-save>Сохранить дату</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: чек платежа -->
+    <div class="modal" id="cl-receipt-modal" aria-label="Чек платежа">
+      <div class="modal__head">
+        <h3 data-cl-receipt-title>Чек</h3>
+        <button class="icon-btn" data-close aria-label="Закрыть">✕</button>
+      </div>
+      <div class="modal__body" data-cl-receipt-body></div>
+    </div>
+
+    <!-- MODAL: превью вложения -->
+    <div class="modal" id="cl-light-modal" aria-label="Просмотр вложения">
+      <div class="modal__head">
+        <h3>Вложение</h3>
+        <button class="icon-btn" data-close aria-label="Закрыть">✕</button>
+      </div>
+      <div class="modal__body">
+        <div class="cl-light-stage">🖼️</div>
+        <p class="muted" data-cl-light-cap style="text-align:center;margin:var(--s-3) 0 0;font-size:13px"></p>
+      </div>
+    </div>
+
+    <script>
+    window.renderPage = function () {
+      var S = window.SHELL, P = window.PINK;
+      var ME = 'u1'; // кабинет Екатерины Жуковой
+      var me0 = P.clients.find(function (c) { return c.id === ME; }) || { name: 'Клиент' };
+      var orders = P.orders.filter(function (o) { return o.clientId === ME; });
+      var myThreads0 = P.chatThreads.filter(function (t) { return t.clientId === ME; });
+
+      // a11y: вкладки — role=button без href, добавляем активацию с клавиатуры
+      document.querySelectorAll('.cl-nav [data-tab]').forEach(function (tab) {
+        tab.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tab.click(); }
+        });
+      });
+
+      // счётчики в навигации — из данных
+      var cOrders = document.querySelector('[data-cl-c-orders]');
+      var cChat = document.querySelector('[data-cl-c-chat]');
+      if (cOrders) cOrders.textContent = orders.length;
+      if (cChat) cChat.textContent = myThreads0.length || '';
+
+      // живой подзаголовок: что прямо сейчас в работе
+      var sub = document.querySelector('[data-cl-hello-sub]');
+      if (sub) {
+        var inWork = orders.find(function (o) { return o.status === 'inwork'; });
+        var doneN = orders.filter(function (o) { return o.status === 'done'; }).length;
+        if (inWork) {
+          var ocn = window.SHELL.occasionById(inWork.occasion);
+          sub.textContent = 'Сейчас в работе: «' + ocn.name + '» на ' +
+            window.SHELL.dateShort(inWork.date) + '. Подрядчики уже готовятся.';
+        } else if (doneN) {
+          sub.textContent = doneN + ' праздника собрано вместе с Pinkshar. Готовы к следующему?';
+        }
+      }
+
+      /* ---------- helpers ---------- */
+      function plural(n, forms) { // forms: [1, 2-4, 5+]
+        var n10 = n % 10, n100 = n % 100;
+        if (n10 === 1 && n100 !== 11) return forms[0];
+        if (n10 >= 2 && n10 <= 4 && (n100 < 10 || n100 >= 20)) return forms[1];
+        return forms[2];
+      }
+      function svcEmoji(id) { var s = S.serviceById(id); return s ? s.emoji : '•'; }
+      function occ(o) { return S.occasionById(o.occasion) || { name: o.occasion, emoji: '🎉' }; }
+      function isActive(o) { return ['new','confirmed','paid','inwork'].indexOf(o.status) > -1; }
+
+      /* ============ МОИ ПРАЗДНИКИ ============ */
+      function orderCard(o) {
+        var oc = occ(o);
+        var chips = o.items.map(function (it) {
+          return '<span class="cl-svc-chip"><span class="em">' + svcEmoji(it.service) + '</span>' +
+                 S.esc(S.serviceById(it.service).name) + '</span>';
+        }).join('');
+        var payNote = '';
+        if (o.paymentStatus === 'awaiting') {
+          payNote = '<div class="cl-pay-line">💳 Ожидает оплаты — ' +
+            '<span class="price" style="color:var(--ink)">' + S.money(o.total) + '</span></div>';
+        } else if (o.paymentStatus === 'escrow') {
+          payNote = '<div class="cl-pay-line">🛡️ ' + S.money(o.total) + ' в эскроу до выполнения</div>';
+        } else if (o.paymentStatus === 'paidout') {
+          payNote = '<div class="cl-pay-line">✓ Оплачено и завершено</div>';
+        } else if (o.paymentStatus === 'refunded') {
+          payNote = '<div class="cl-pay-line">↩ Средства возвращены</div>';
+        }
+        var cta = (o.paymentStatus === 'awaiting')
+          ? '<button class="btn btn--primary btn--sm" data-cl-pay="' + o.id + '">Оплатить</button>'
+          : '<button class="btn btn--ghost btn--sm" data-cl-open="' + o.id + '">Детали</button>';
+        return '<article class="card cl-order" data-cl-open="' + o.id + '" data-status="' + o.status + '" ' +
+            'role="button" tabindex="0" aria-label="Детали заказа ' + o.id + '">' +
+          '<div class="cl-order__top">' +
+            '<div class="row gap" style="align-items:flex-start">' +
+              '<span class="cl-order__emoji">' + oc.emoji + '</span>' +
+              '<div>' +
+                '<div class="cl-order__name">' + S.esc(oc.name) + '</div>' +
+                '<div class="cl-order__meta">' +
+                  '<span class="kicker">' + o.id + '</span>' +
+                  '<span>📅 <span class="cl-mono">' + S.dateShort(o.date) + '</span></span>' +
+                  '<span>📍 ' + S.esc(o.address.replace('Москва, ', '')) + '</span>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+            S.statusBadge(o.status) +
+          '</div>' +
+          '<div class="cl-order__svc">' + chips + '</div>' +
+          '<div class="cl-order__foot">' +
+            payNote +
+            '<div class="row gap">' +
+              '<span class="price price--big">' + S.money(o.total) + '</span>' + cta +
+            '</div>' +
+          '</div>' +
+        '</article>';
+      }
+
+      function renderOrders(filter) {
+        var list = orders.filter(function (o) {
+          if (filter === 'active') return isActive(o);
+          if (filter === 'done') return o.status === 'done' || o.status === 'rejected';
+          return true;
+        }).sort(function (a, b) {
+          // активные сначала, дальше по дате
+          return (isActive(b) - isActive(a)) || a.date.localeCompare(b.date);
+        });
+        var host = document.querySelector('[data-cl-orders]');
+        var empty = document.querySelector('[data-cl-orders-empty]');
+        if (!list.length) { host.classList.add('hide'); empty.classList.remove('hide'); return; }
+        host.classList.remove('hide'); empty.classList.add('hide');
+        host.innerHTML = list.map(orderCard).join('');
+      }
+      renderOrders('all');
+
+      document.querySelectorAll('[data-cl-filter] button').forEach(function (b) {
+        b.addEventListener('click', function () {
+          document.querySelectorAll('[data-cl-filter] button').forEach(function (x) {
+            x.classList.toggle('active', x === b);
+          });
+          renderOrders(b.getAttribute('data-cl-f'));
+        });
+      });
+
+      /* ============ DRAWER: детали ============ */
+      function openOrder(id) {
+        var o = S.orderById(id); if (!o) return;
+        var oc = occ(o);
+        document.querySelector('[data-cl-d-id]').textContent = o.id;
+        document.querySelector('[data-cl-d-name]').innerHTML = oc.emoji + ' ' + S.esc(oc.name);
+
+        var items = o.items.map(function (it) {
+          return '<div class="cl-d-row">' +
+            '<div class="cl-d-svc">' +
+              '<span class="cl-d-svc__em">' + svcEmoji(it.service) + '</span>' +
+              '<div><div class="cl-d-svc__name">' + S.esc(it.label) + '</div>' +
+              '<div class="cl-d-svc__by">' + S.esc(it.contractor) + '</div></div>' +
+            '</div>' +
+            '<span class="price">' + S.money(it.amount) + '</span>' +
+          '</div>';
+        }).join('');
+
+        var tl = o.timeline.map(function (st, i) {
+          var cls = st.state === 'done' ? ' done' : (st.state === 'current' ? ' current'
+                  : (st.state === 'rejected' ? ' current' : ''));
+          var time = (o.times && o.times[i]) ? '<div class="timeline__time">' + o.times[i] + '</div>' : '';
+          var tcolor = st.state === 'rejected' ? ' style="color:var(--bad)"' : '';
+          return '<div class="timeline__item' + cls + '">' +
+            '<div class="timeline__t"' + tcolor + '>' + S.esc(st.t) + '</div>' + time + '</div>';
+        }).join('');
+
+        // эскроу-пояснение/статус оплаты
+        var payBlock = '';
+        if (o.paymentStatus === 'awaiting') {
+          payBlock = '<div class="cl-esc"><span class="cl-esc__ic">💳</span><div>' +
+            '<strong>Ожидает оплаты.</strong> После оплаты сумма уйдёт в эскроу — Pinkshar придержит её ' +
+            'до выполнения, затем переведёт подрядчикам.</div></div>' +
+            '<button class="btn btn--primary btn--block" data-cl-pay="' + o.id + '" ' +
+            'style="margin-top:var(--s-4)">Оплатить ' + S.money(o.total) + '</button>';
+        } else if (o.paymentStatus === 'escrow') {
+          payBlock = '<div class="cl-esc"><span class="cl-esc__ic">🛡️</span><div>' +
+            '<strong>' + S.money(o.total) + ' в эскроу.</strong> Деньги защищены и будут переведены ' +
+            'подрядчикам после выполнения заказа.</div></div>';
+        } else if (o.paymentStatus === 'paidout') {
+          payBlock = '<div class="cl-esc"><span class="cl-esc__ic">✓</span><div>' +
+            '<strong>Заказ выполнен.</strong> Оплата переведена подрядчикам. Спасибо, что доверились Pinkshar!' +
+            '</div></div>';
+        } else if (o.paymentStatus === 'refunded') {
+          payBlock = '<div class="cl-esc" style="background:var(--bad-soft);border-color:#f3d4d4;color:var(--bad)">' +
+            '<span class="cl-esc__ic">↩</span><div><strong>Средства возвращены.</strong> ' +
+            'Заказ отклонён, ' + S.money(o.total) + ' возвращены на вашу карту.</div></div>';
+        }
+
+        var thread = S.threadByOrder(o.id);
+        var chatBtn = thread
+          ? '<button class="btn btn--soft btn--block" data-cl-gochat="' + o.id + '" ' +
+            'style="margin-top:var(--s-3)">💬 Открыть чат по заказу</button>'
+          : '';
+
+        document.querySelector('[data-cl-d-body]').innerHTML =
+          '<div class="row gap between" style="margin-bottom:var(--s-4)">' +
+            S.statusBadge(o.status) +
+            '<span class="muted" style="font-size:13px">📅 ' + S.dateShort(o.date) + '</span>' +
+          '</div>' +
+          '<div class="cl-d-svc__by" style="margin-bottom:var(--s-4)">📍 ' + S.esc(o.address) + '</div>' +
+
+          '<div class="card__title" style="margin-bottom:var(--s-3)">Статус заказа</div>' +
+          '<div class="timeline" style="margin-bottom:var(--s-5)">' + tl + '</div>' +
+
+          '<div class="card__title" style="margin-bottom:var(--s-2)">Состав заказа</div>' +
+          '<div class="divide">' + items + '</div>' +
+
+          '<hr class="divider">' +
+          '<div class="cl-total" style="margin-bottom:var(--s-1)">' +
+            '<span class="muted">Итого, услуги</span>' +
+            '<span class="price">' + S.money(o.total) + '</span></div>' +
+          '<div class="cl-total" style="margin-bottom:var(--s-4)">' +
+            '<span style="font-weight:700">К оплате</span>' +
+            '<span class="cl-total__sum">' + S.money(o.total) + '</span></div>' +
+          '<p class="muted" style="font-size:12.5px;margin-bottom:var(--s-4)">' +
+            'Комиссия платформы ' + S.money(o.commission) + ' уже включена в цену и удерживается из выплаты подрядчику — ' +
+            'вы платите только итоговую сумму.</p>' +
+
+          payBlock + chatBtn;
+
+        S.openOverlay(document.getElementById('cl-order-drawer'));
+      }
+
+      /* ============ MODAL: оплата ============ */
+      function openPay(id) {
+        var o = S.orderById(id); if (!o) return;
+        document.querySelector('[data-cl-pay-title]').textContent = 'Оплата заказа ' + o.id;
+        document.querySelector('[data-cl-pay-body]').innerHTML =
+          '<div class="cl-total" style="margin-bottom:var(--s-2)">' +
+            '<span class="muted">' + S.esc(occ(o).name) + ' · ' + S.dateShort(o.date) + '</span></div>' +
+          '<div class="cl-total" style="margin-bottom:var(--s-5)">' +
+            '<span style="font-weight:700">К оплате</span>' +
+            '<span class="cl-total__sum">' + S.money(o.total) + '</span></div>' +
+
+          '<div class="field"><label>Способ оплаты</label>' +
+            '<select class="select">' +
+              '<option>Карта Visa · Mastercard · МИР</option>' +
+              '<option>СБП — по QR-коду</option>' +
+              '<option>SberPay</option>' +
+            '</select></div>' +
+          '<div class="cl-fields-2">' +
+            '<div class="field"><label>Номер карты</label>' +
+              '<input class="input mono" inputmode="numeric" placeholder="0000 0000 0000 0000"></div>' +
+            '<div class="field"><label>Срок · CVC</label>' +
+              '<input class="input mono" placeholder="08/28 · 000"></div>' +
+          '</div>' +
+
+          '<div class="cl-esc" style="margin:var(--s-2) 0 var(--s-5)">' +
+            '<span class="cl-esc__ic">🛡️</span><div>' +
+            '<strong>Безопасная сделка.</strong> Pinkshar придержит ' + S.money(o.total) +
+            ' до выполнения, затем переведёт подрядчику. Если праздник сорвётся — вернём деньги.' +
+            '</div></div>' +
+
+          '<button class="btn btn--primary btn--block btn--lg" data-close>' +
+            'Оплатить ' + S.money(o.total) + '</button>' +
+          '<p class="muted" style="font-size:12px;text-align:center;margin:var(--s-3) 0 0">' +
+            'Нажимая «Оплатить», вы соглашаетесь с условиями сервиса. Это демонстрационная форма.</p>';
+        S.openOverlay(document.getElementById('cl-pay-modal'));
+      }
+
+      /* делегирование кликов: карточки/детали/оплата */
+      document.addEventListener('click', function (e) {
+        var payBtn = e.target.closest('[data-cl-pay]');
+        if (payBtn) { e.stopPropagation(); openPay(payBtn.getAttribute('data-cl-pay')); return; }
+        var goChat = e.target.closest('[data-cl-gochat]');
+        if (goChat) { S.closeOverlays(); gotoChat(goChat.getAttribute('data-cl-gochat')); return; }
+        var attach = e.target.closest('[data-cl-attach]');
+        if (attach) { openAttach(attach.getAttribute('data-cl-attach')); return; }
+        var openBtn = e.target.closest('[data-cl-open]');
+        if (openBtn) { openOrder(openBtn.getAttribute('data-cl-open')); return; }
+      });
+
+      // a11y: открытие карточки заказа с клавиатуры (когда фокус на самой карточке)
+      document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        var card = e.target.closest && e.target.closest('.cl-order');
+        if (card && e.target === card) { e.preventDefault(); openOrder(card.getAttribute('data-cl-open')); }
+      });
+
+      // вложение из чата → лайтбокс-превью (плейсхолдер)
+      function openAttach(name) {
+        document.querySelector('[data-cl-light-cap]').textContent = name || 'Вложение';
+        S.openOverlay(document.getElementById('cl-light-modal'));
+      }
+
+      /* ============ ЧАТ ============ */
+      var threads = P.chatThreads.filter(function (t) { return t.clientId === ME; });
+      var fromLabel = { client: 'Вы', partner: '', platform: 'Pinkshar' };
+
+      function lastText(t) {
+        var m = t.messages[t.messages.length - 1];
+        return (m.from === 'client' ? 'Вы: ' : '') + m.text;
+      }
+
+      function renderChat() {
+        var host = document.querySelector('[data-cl-chat]');
+        if (!threads.length) {
+          host.innerHTML = '<div class="empty" style="grid-column:1/-1">' +
+            '<div class="empty__icon">💬</div>' +
+            '<div class="empty__title">Чатов пока нет</div>' +
+            '<p>Когда подрядчик начнёт работу над заказом, переписка появится здесь.</p></div>';
+          return;
+        }
+        var listHtml = threads.map(function (t, i) {
+          var o = S.orderById(t.orderId);
+          return '<button class="cl-thread' + (i === 0 ? ' active' : '') + '" data-cl-thread="' + t.orderId + '">' +
+            '<span class="avatar avatar--sm avatar--plum">' + S.initials(t.contractor) + '</span>' +
+            '<span style="min-width:0">' +
+              '<span class="cl-thread__id">' + t.orderId + ' · ' + S.esc(occ(o).name) + '</span>' +
+              '<div class="cl-thread__name">' + S.esc(t.contractor) + '</div>' +
+              '<div class="cl-thread__last">' + S.esc(lastText(t)) + '</div>' +
+            '</span>' +
+          '</button>';
+        }).join('');
+
+        host.innerHTML =
+          '<div class="cl-thread-list">' + listHtml + '</div>' +
+          '<div class="cl-chat-main" data-cl-chat-main></div>';
+
+        host.querySelectorAll('[data-cl-thread]').forEach(function (b) {
+          b.addEventListener('click', function () {
+            host.querySelectorAll('[data-cl-thread]').forEach(function (x) {
+              x.classList.toggle('active', x === b);
+            });
+            renderThread(b.getAttribute('data-cl-thread'));
+          });
+        });
+        renderThread(threads[0].orderId);
+      }
+
+      function bubble(m) {
+        if (m.from === 'platform') {
+          return '<div class="bubble bubble--platform">' + S.esc(m.text) +
+            '<div class="bubble__meta">' + m.time + '</div></div>';
+        }
+        var out = m.from === 'client';
+        var attach = '';
+        if (m.attachment) {
+          attach = '<button type="button" class="cl-attach-img" data-cl-attach="' + S.esc(m.attachment) + '">' +
+            '<span class="cl-attach-thumb">🖼️</span>' +
+            '<span style="text-align:left">' + S.esc(m.attachment) +
+            '<br><span class="muted" style="font-weight:500">Нажмите, чтобы посмотреть</span></span></button>';
+        }
+        return '<div class="bubble bubble--' + (out ? 'out' : 'in') + '">' +
+          S.esc(m.text) + attach +
+          '<div class="bubble__meta">' + m.time + '</div></div>';
+      }
+
+      function renderThread(orderId) {
+        var t = S.threadByOrder(orderId);
+        var o = S.orderById(orderId);
+        var main = document.querySelector('[data-cl-chat-main]');
+        if (!t || !main) return;
+        var msgs = t.messages.map(bubble).join('');
+        main.innerHTML =
+          '<div class="cl-chat-head">' +
+            '<span class="avatar avatar--plum">' + S.initials(t.contractor) + '</span>' +
+            '<div style="flex:1;min-width:0">' +
+              '<div style="font-weight:700;font-size:14.5px">' + S.esc(t.contractor) + '</div>' +
+              '<div class="cl-thread__id">' + t.orderId + ' · ' + S.esc(occ(o).name) + ' · ' + S.dateShort(o.date) + '</div>' +
+            '</div>' +
+            S.statusBadge(o.status) +
+          '</div>' +
+          '<div class="cl-chat-scroll chat" data-cl-scroll>' + msgs + '</div>' +
+          '<div class="cl-quick">' +
+            '<button data-cl-q="Спасибо, всё отлично! 🩷">Спасибо! 🩷</button>' +
+            '<button data-cl-q="Подскажите, во сколько приедете?">Когда приедете?</button>' +
+            '<button data-cl-q="Можно прислать фото готового результата?">Фото результата?</button>' +
+          '</div>' +
+          '<div class="chat-input">' +
+            '<input class="input" data-cl-msg placeholder="Написать сообщение…">' +
+            '<button class="btn btn--primary" data-cl-send>Отправить</button>' +
+          '</div>';
+
+        var scroll = main.querySelector('[data-cl-scroll]');
+        var field = main.querySelector('[data-cl-msg]');
+        scroll.scrollTop = scroll.scrollHeight;
+
+        function send(text) {
+          text = (text || '').trim(); if (!text) return;
+          var now = new Date();
+          var dd = ('0' + now.getDate()).slice(-2), mo = ('0' + (now.getMonth() + 1)).slice(-2);
+          var hh = ('0' + now.getHours()).slice(-2), mm = ('0' + now.getMinutes()).slice(-2);
+          scroll.insertAdjacentHTML('beforeend', bubble({ from: 'client', text: text, time: dd + '.' + mo + ' ' + hh + ':' + mm }));
+          scroll.scrollTop = scroll.scrollHeight;
+          field.value = '';
+        }
+        main.querySelector('[data-cl-send]').addEventListener('click', function () { send(field.value); });
+        field.addEventListener('keydown', function (e) { if (e.key === 'Enter') send(field.value); });
+        main.querySelectorAll('[data-cl-q]').forEach(function (q) {
+          q.addEventListener('click', function () { send(q.getAttribute('data-cl-q')); });
+        });
+      }
+      renderChat();
+
+      // переход в чат из drawer + активация вкладки
+      function gotoChat(orderId) {
+        var navChat = document.querySelector('.cl-nav [data-tab="chat"]');
+        if (navChat) navChat.click();
+        var btn = document.querySelector('[data-cl-thread="' + orderId + '"]');
+        if (btn) btn.click();
+      }
+
+      /* ============ ОПЛАТЫ ============ */
+      var myOrderIds = orders.map(function (o) { return o.id; });
+      // Кабинет клиента показывает только её собственные движения денег:
+      // пополнение эскроу (in) и возвраты (refund). Выплаты подрядчику и комиссия
+      // платформы (payout/commission) — внутренние транзакции, клиент их не совершал.
+      var myPayments = P.payments.filter(function (p) {
+        return myOrderIds.indexOf(p.orderId) > -1 && (p.type === 'in' || p.type === 'refund');
+      });
+      // Подстраховка: если у оплаченного/в эскроу заказа нет записи «in» в данных,
+      // синтезируем её, чтобы история оплат клиента была полной (без правок общих данных).
+      orders.forEach(function (o) {
+        var hasIn = myPayments.some(function (p) { return p.orderId === o.id && p.type === 'in'; });
+        if (!hasIn && (o.paymentStatus === 'paidout' || o.paymentStatus === 'escrow')) {
+          myPayments.push({
+            id: 'TX-' + o.id.replace('PS-', ''),
+            orderId: o.id, type: 'in', party: me0.name, amount: o.total,
+            date: o.date, status: o.paymentStatus === 'escrow' ? 'escrow' : 'done', _synth: true
+          });
+        }
+      });
+
+      // KPI оплат
+      var inEscrow = orders.filter(function (o) { return o.paymentStatus === 'escrow'; })
+        .reduce(function (s, o) { return s + o.total; }, 0);
+      var awaiting = orders.filter(function (o) { return o.paymentStatus === 'awaiting'; })
+        .reduce(function (s, o) { return s + o.total; }, 0);
+      var spent = orders.filter(function (o) { return o.paymentStatus === 'paidout'; })
+        .reduce(function (s, o) { return s + o.total; }, 0);
+
+      document.querySelector('[data-cl-paystats]').innerHTML =
+        '<div class="card stat"><div class="stat__label">В эскроу сейчас</div>' +
+          '<div class="stat__value">' + S.money(inEscrow) + '</div>' +
+          '<div class="stat__sub">🛡️ защищено до выполнения</div></div>' +
+        '<div class="card stat"><div class="stat__label">Ожидает оплаты</div>' +
+          '<div class="stat__value">' + S.money(awaiting) + '</div>' +
+          '<div class="stat__sub">по неоплаченным заявкам</div></div>' +
+        '<div class="card stat"><div class="stat__label">Всего на праздники</div>' +
+          '<div class="stat__value">' + S.money(spent + inEscrow) + '</div>' +
+          '<div class="stat__sub">за всё время с Pinkshar</div></div>';
+
+      var txLabel = P.labels.txType;
+      var rows = myPayments.sort(function (a, b) { return b.date.localeCompare(a.date); })
+        .map(function (p) {
+          var o = S.orderById(p.orderId);
+          var dirLabel, statBadge;
+          if (p.type === 'in') { dirLabel = 'Оплата заказа'; }
+          else if (p.type === 'refund') { dirLabel = 'Возврат средств'; }
+          else if (p.type === 'payout') { dirLabel = 'Выплата подрядчику'; }
+          else { dirLabel = 'Комиссия Pinkshar'; }
+          if (p.status === 'escrow') statBadge = '<span class="badge badge--confirmed">В эскроу</span>';
+          else if (p.type === 'refund') statBadge = '<span class="badge badge--rejected">Возврат</span>';
+          else statBadge = '<span class="badge badge--done">Завершено</span>';
+          var receipt = (p.type === 'in' || p.type === 'refund')
+            ? '<button class="btn btn--ghost btn--sm" type="button" data-cl-receipt="' + p.id + '">Чек</button>'
+            : '<span class="muted">—</span>';
+          return '<tr>' +
+            '<td><span class="kicker">' + p.id + '</span><div class="muted" style="font-size:12px">' +
+              p.orderId + ' · ' + S.esc(occ(o).name) + '</div></td>' +
+            '<td>' + dirLabel + '</td>' +
+            '<td class="num">' + S.dateNum(p.date) + '</td>' +
+            '<td>' + statBadge + '</td>' +
+            '<td class="num">' + S.money(p.amount) + '</td>' +
+            '<td style="text-align:right">' + receipt + '</td>' +
+          '</tr>';
+        }).join('');
+
+      document.querySelector('[data-cl-paytable]').innerHTML =
+        '<table class="table"><thead><tr>' +
+          '<th>Платёж</th><th>Назначение</th><th class="num">Дата</th><th>Статус</th>' +
+          '<th class="num">Сумма</th><th style="text-align:right">Чек</th>' +
+        '</tr></thead><tbody>' + (rows || '<tr><td colspan="6"><div class="empty">' +
+          '<div class="empty__title">Платежей пока нет</div></div></td></tr>') + '</tbody></table>';
+
+      // «Чек» → мок-модалка с реквизитами платежа
+      function openReceipt(txId) {
+        var p = myPayments.find(function (x) { return x.id === txId; });
+        if (!p) return;
+        var o = S.orderById(p.orderId);
+        var kind = p.type === 'refund' ? 'Возврат средств' : 'Оплата заказа';
+        var statTxt = p.status === 'escrow' ? 'В эскроу до выполнения'
+          : (p.type === 'refund' ? 'Возвращено на карту' : 'Проведён');
+        function line(k, v) {
+          return '<div class="cl-d-row" style="padding:9px 0">' +
+            '<span class="muted">' + k + '</span><span class="mono" style="font-weight:600">' + v + '</span></div>';
+        }
+        document.querySelector('[data-cl-receipt-title]').textContent = 'Чек ' + p.id;
+        document.querySelector('[data-cl-receipt-body]').innerHTML =
+          '<div class="cl-esc" style="margin-bottom:var(--s-4)">' +
+            '<span class="cl-esc__ic">🧾</span><div>' +
+            '<strong>' + kind + '.</strong> Электронный чек сформирован Pinkshar и отправлен на ваш e-mail.' +
+            '</div></div>' +
+          '<div class="divide">' +
+            line('Номер транзакции', p.id) +
+            line('Заказ', p.orderId + ' · ' + S.esc(occ(o).name)) +
+            line('Дата', S.dateNum(p.date)) +
+            line('Статус', statTxt) +
+          '</div>' +
+          '<hr class="divider">' +
+          '<div class="cl-total" style="margin-bottom:var(--s-4)">' +
+            '<span style="font-weight:700">Сумма</span>' +
+            '<span class="cl-total__sum">' + S.money(p.amount) + '</span></div>' +
+          '<button class="btn btn--soft btn--block" data-close>Готово</button>' +
+          '<p class="muted" style="font-size:12px;text-align:center;margin:var(--s-3) 0 0">' +
+            'Демонстрационный чек.</p>';
+        S.openOverlay(document.getElementById('cl-receipt-modal'));
+      }
+      document.querySelector('[data-cl-paytable]').addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-cl-receipt]');
+        if (btn) openReceipt(btn.getAttribute('data-cl-receipt'));
+      });
+
+      /* ============ НАПОМИНАНИЯ ============ */
+      // suggestPkg — явный id пакета под конкретный повод/контекст, чтобы взрослой
+      // сестре не подбирался детский пакет. null = подборку не показываем.
+      var reminders = [
+        { who: 'Дочка Соня', date: '2026-07-15', occ: 'birthday', note: 'Исполняется 7 лет', suggestPkg: 'pkg-kids' },
+        { who: 'Мама — Ольга', date: '2026-08-03', occ: 'jubilee', note: 'Юбилей, 60 лет', suggestPkg: 'pkg-jubilee' },
+        { who: 'Сестра Полина', date: '2026-09-21', occ: 'birthday', note: 'День рождения', suggestPkg: 'pkg-hen' }
+      ];
+      function pkgFor(r) {
+        if (r.suggestPkg) {
+          var byId = P.packages.find(function (p) { return p.id === r.suggestPkg; });
+          if (byId) return byId;
+        }
+        return P.packages.find(function (p) { return p.occasion === r.occ; });
+      }
+      function remCard(r) {
+        var oc = S.occasionById(r.occ) || { name: r.occ, emoji: '🎉' };
+        var p = r.date.split('-');
+        var day = parseInt(p[2], 10);
+        var mon = S.months[parseInt(p[1], 10) - 1] || '';
+        var pkg = pkgFor(r);
+        var suggest = pkg
+          ? '<div class="row gap" style="margin-top:7px">' +
+              '<span class="badge badge--gold">Подобрали: ' + S.esc(pkg.name) + '</span>' +
+              '<span class="price" style="font-size:13px">' + S.money(pkg.price) + '</span>' +
+            '</div>'
+          : '';
+        return '<div class="cl-rem">' +
+          '<div class="cl-rem__date"><div class="cl-rem__day">' + day + '</div>' +
+            '<div class="cl-rem__mon">' + mon + '</div></div>' +
+          '<div class="cl-rem__sep"></div>' +
+          '<div class="cl-rem__body">' +
+            '<div class="cl-rem__who">' + oc.emoji + ' ' + S.esc(r.who) + '</div>' +
+            '<div class="cl-rem__what">' + S.esc(r.note) + ' · ' + S.esc(oc.name) + '</div>' +
+            suggest +
+          '</div>' +
+          '<a class="btn btn--soft btn--sm" href="index.html#' + r.occ + '">Собрать праздник</a>' +
+        '</div>';
+      }
+      function renderReminders() {
+        reminders.sort(function (a, b) { return a.date.localeCompare(b.date); });
+        document.querySelector('[data-cl-rem]').innerHTML = reminders.map(remCard).join('');
+      }
+      renderReminders();
+
+      // повод в форме добавления даты
+      var occSel = document.getElementById('cl-rem-occ');
+      if (occSel) {
+        occSel.innerHTML = P.occasions.map(function (o) {
+          return '<option value="' + o.id + '">' + o.emoji + ' ' + o.name + '</option>';
+        }).join('');
+      }
+
+      // «Сохранить дату» — реально добавляет напоминание в список и закрывает модалку
+      var remSaveBtn = document.querySelector('#cl-add-date [data-cl-rem-save]');
+      if (remSaveBtn) {
+        remSaveBtn.addEventListener('click', function () {
+          var who = (document.getElementById('cl-rem-who').value || '').trim() || 'Близкий человек';
+          var date = document.getElementById('cl-rem-date').value || '2026-08-14';
+          var occId = document.getElementById('cl-rem-occ').value;
+          var ocn = S.occasionById(occId) || { name: occId };
+          reminders.unshift({ who: who, date: date, occ: occId, note: ocn.name });
+          renderReminders();
+          // сброс полей под следующий ввод
+          document.getElementById('cl-rem-who').value = '';
+          S.closeOverlays();
+        });
+      }
+
+      /* ============ ПРОФИЛЬ ============ */
+      var me = me0;
+      var doneCount = orders.filter(function (o) { return o.status === 'done'; }).length;
+      // «С Pinkshar с …» — год и месяц из самих данных (me.since='YYYY-MM'), без хардкода
+      var MONTHS_FULL = ['января','февраля','марта','апреля','мая','июня','июля',
+        'августа','сентября','октября','ноября','декабря'];
+      var sinceP = (me.since || '').split('-');
+      var sinceLabel = (sinceP.length === 2)
+        ? (MONTHS_FULL[parseInt(sinceP[1], 10) - 1] + ' ' + sinceP[0])
+        : '—';
+      document.querySelector('[data-cl-profile]').innerHTML =
+        '<div class="cl-profile-head" style="margin-bottom:var(--s-5)">' +
+          '<span class="avatar avatar--lg">' + S.initials(me.name) + '</span>' +
+          '<div>' +
+            '<h3>' + S.esc(me.name) + '</h3>' +
+            '<div class="muted" style="font-size:13px">' +
+              'С Pinkshar с ' + sinceLabel + ' · ' +
+              orders.length + ' ' + plural(orders.length, ['заказ', 'заказа', 'заказов']) +
+              ' · ' + doneCount + ' завершено' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="cl-fields-2">' +
+          '<div class="field"><label>Имя</label><input class="input" value="' + S.esc(me.name) + '"></div>' +
+          '<div class="field"><label>Телефон</label><input class="input mono" value="' + S.esc(me.phone) + '"></div>' +
+          '<div class="field"><label>E-mail</label><input class="input" value="e.zhukova@example.ru"></div>' +
+          '<div class="field"><label>Город</label><input class="input" value="Москва"></div>' +
+        '</div>' +
+        '<div class="field"><label>Адрес по умолчанию</label>' +
+          '<input class="input" value="Москва, ул. Гарибальди, 23"></div>' +
+        '<hr class="divider">' +
+        '<div class="between">' +
+          '<div><div style="font-weight:600">Уведомления о статусе заказов</div>' +
+            '<div class="muted" style="font-size:13px">Push и e-mail на каждом шаге праздника</div></div>' +
+          '<span class="badge badge--paid">Включены</span>' +
+        '</div>' +
+        '<div class="row gap" style="margin-top:var(--s-5);justify-content:flex-end">' +
+          '<button class="btn btn--ghost">Отмена</button>' +
+          '<button class="btn btn--primary">Сохранить</button>' +
+        '</div>';
+    };
+    </script>
+  </main>
+  <script src="assets/data.js?v=8"></script>
+  <script src="assets/shell.js?v=8"></script>
+</body>
+</html>

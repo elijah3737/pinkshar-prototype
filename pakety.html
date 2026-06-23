@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Пакеты под повод — Pinkshar</title>
+  <meta name="description" content="Готовые пакеты праздника под повод: шары, торт, цветы, съёмка и шоу в одном заказе и одном чеке. Цена комплекта ниже, чем поштучно. Оплата в эскроу.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="assets/app.css?v=8">
+</head>
+<body>
+  <div data-mkt-header></div>
+
+  <main id="view"></main>
+
+  <footer data-mkt-footer></footer>
+
+  <script src="assets/data.js?v=8"></script>
+  <script src="assets/shell.js?v=8"></script>
+  <script>
+  /* ============================================================
+     КАТАЛОГ ПАКЕТОВ (P1) — pakety.html
+     Витрина пакетов-композитов из PINK.packages. Каждая карточка
+     кликабельна целиком → paket.html?id=<packageId> (drill-in,
+     навигацией, без попапов). Фильтр-пилюли: повод + бюджет.
+     Состав показан тегами (детальный кликабельный состав — на paket.html).
+     ============================================================ */
+  window.renderPage = function () {
+    var P = window.PINK, S = window.SHELL;
+    var esc = S.esc, money = S.money;
+    var view = document.getElementById('view');
+    if (!P || !S || !view) return;
+
+    /* ---- источник: пакеты-композиты P1 ---- */
+    var PKGS = (P.packages || []).slice().sort(function (a, b) { return a.price - b.price; });
+
+    /* ---- хелперы повода ---- */
+    function occName(id) { var o = S.occasionById(id); return o ? o.name : 'Праздник'; }
+    function occEmoji(id) { var o = S.occasionById(id); return (o && o.emoji) || '🎈'; }
+
+    /* ---- бейдж: при скидке — % экономии (бьёт сильнее), иначе тег пакета ---- */
+    function topBadge(p) {
+      if (p.oldPrice && p.oldPrice > p.price) {
+        var pct = Math.round((1 - p.price / p.oldPrice) * 100);
+        return '<span class="badge badge--paid">−' + pct + '% к цене врозь</span>';
+      }
+      var TAG = { 'хит': 'badge--new', 'популярное': 'badge--new', 'новинка': 'badge--gold',
+                  'премиум': 'badge--gold', 'старт': 'badge--neutral' };
+      var cls = TAG[p.tag] || 'badge--ghost';
+      return '<span class="badge ' + cls + '">' + esc(p.tag || 'пакет') + '</span>';
+    }
+
+    /* ---- карточка пакета: вся <a> → paket.html?id= ---- */
+    function cardHTML(p, idx) {
+      var photo = (p.photos && p.photos[0]) || '';
+      var emoji = p.emoji || occEmoji(p.occasion);
+      var fb = "this.closest('.mkt-pkg__media').classList.add('mkt-pkg__media--fallback')";
+      var media =
+        '<div class="mkt-pkg__media' + (photo ? '' : ' mkt-pkg__media--fallback') + '" data-emoji="' + esc(emoji) + '">' +
+          '<img src="' + esc(photo) + '" alt="' + esc(p.name) + '" loading="lazy" onerror="' + fb + '">' +
+          '<span class="mkt-pkg__tag">' + topBadge(p) + '</span>' +
+        '</div>';
+
+      // состав — компактные теги (детальный кликабельный состав живёт на paket.html)
+      var items = (p.items || []);
+      var shown = items.slice(0, 4);
+      var more = items.length - shown.length;
+      var tags = shown.map(function (i) {
+        return '<span class="pkt-tag">' + esc(i.label) + '</span>';
+      }).join('') + (more > 0 ? '<span class="pkt-tag pkt-tag--more">+' + more + '</span>' : '');
+
+      var hasSave = p.oldPrice && p.oldPrice > p.price;
+      var priceBlock =
+        '<div class="mkt-pkg__price">' +
+          '<span class="mkt-pkg__from">всё включено · от</span>' +
+          '<span class="price price--big">' + money(p.price) + '</span>' +
+          (hasSave ? '<span class="mkt-pkg__old">' + money(p.oldPrice) + '</span>' : '') +
+        '</div>' +
+        (hasSave ? '<p class="pkt-save">Выгода ' + money(p.oldPrice - p.price) + ' против заказа врозь</p>' : '');
+
+      var d = ((idx || 0) % 4) + 1;
+      return '' +
+        '<a class="mkt-pkg pkt-card mkt-reveal" data-d="' + d + '" data-occ="' + esc(p.occasion) + '" ' +
+            'data-price="' + p.price + '" href="' + S.paketHref(p.id) + '">' +
+          media +
+          '<div class="mkt-pkg__body">' +
+            '<p class="mkt-pkg__occ">' + esc(occEmoji(p.occasion)) + ' ' + esc(occName(p.occasion)) + '</p>' +
+            '<h3 class="mkt-pkg__name">' + esc(p.name) + '</h3>' +
+            (p.desc ? '<p class="mkt-pkg__desc">' + esc(p.desc) + '</p>' : '') +
+            '<div class="pkt-tags">' + tags + '</div>' +
+            '<div class="mkt-pkg__foot">' +
+              priceBlock +
+              '<span class="pkt-card__go">Открыть пакет' +
+                '<svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">' +
+                  '<path d="M3 7.5h8M7.5 4l3.5 3.5L7.5 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+              '</span>' +
+            '</div>' +
+          '</div>' +
+        '</a>';
+    }
+
+    /* ---- бюджет-пресеты (по реальному разбросу цен пакетов) ---- */
+    var BUDGETS = [
+      { id: 'all',  label: 'Любой бюджет', min: 0,     max: Infinity },
+      { id: 'b1',   label: 'до 25 000 ₽',  min: 0,     max: 25000 },
+      { id: 'b2',   label: '25–40 тыс ₽',  min: 25000, max: 40000 },
+      { id: 'b3',   label: 'от 40 000 ₽',  min: 40000, max: Infinity }
+    ];
+
+    /* ---- состояние фильтра ---- */
+    var state = { occ: 'all', budget: 'all' };
+
+    function matches(p) {
+      if (state.occ !== 'all' && p.occasion !== state.occ) return false;
+      var b = BUDGETS.find(function (x) { return x.id === state.budget; });
+      if (b && !(p.price >= b.min && p.price < b.max)) return false;
+      return true;
+    }
+
+    /* ---- HERO + крошки ---- */
+    var gal = P.gallery || [];
+    var heroPhotos = [gal[8], gal[0], gal[6]].filter(Boolean)
+      .map(function (g) { return S.mktPhoto(g, true); }).join('');
+
+    view.innerHTML = '' +
+      '<section class="mkt-hero">' +
+        '<div class="mkt-hero__inner pkt-hero">' +
+          '<div class="mkt-hero__copy">' +
+            S.crumbs([{ label: 'Главная', href: 'index.html' }, { label: 'Пакеты под повод' }]) +
+            '<p class="mkt-hero__kicker">Весь праздник — одной заявкой</p>' +
+            '<h1 class="mkt-hero__title">Готовые пакеты <em>под повод</em></h1>' +
+            '<p class="mkt-hero__lead">Шары, торт, цветы, съёмка и шоу — уже собраны в продуманные ' +
+              'наборы и стоят дешевле, чем по отдельности. Выбираете повод — остальное Pinkshar ' +
+              'сводит в один заказ и один чек.</p>' +
+            '<div class="mkt-hero__cta">' +
+              '<a class="btn btn--primary btn--lg" href="#catalog">Смотреть пакеты</a>' +
+              '<a class="btn btn--ghost btn--lg" href="uslugi.html">Собрать свой набор</a>' +
+            '</div>' +
+            '<div class="mkt-hero__trust">' +
+              '<span><strong>' + PKGS.length + '</strong> готовых пакетов</span>' +
+              '<span class="mkt-hero__sep" aria-hidden="true"></span>' +
+              '<span><strong>5,0</strong> рейтинг по 173 оценкам</span>' +
+              '<span class="mkt-hero__sep" aria-hidden="true"></span>' +
+              '<span><strong>738</strong> праздников собрано</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="mkt-hero__collage">' + heroPhotos + '</div>' +
+        '</div>' +
+      '</section>' +
+
+      '<section class="mkt-band" id="catalog">' +
+        '<div class="mkt-band__inner">' +
+          '<div class="mkt-band__head">' +
+            '<h2 class="mkt-h2">Выберите повод — пакет уже собран</h2>' +
+            '<p class="mkt-lead">Каждый набор — шары и услуги в одном заказе по фиксированной цене. ' +
+              'Состав прозрачен, выгода посчитана, оплата держится в эскроу до выполнения.</p>' +
+          '</div>' +
+
+          '<div class="pkt-filters">' +
+            '<div class="pkt-filterrow">' +
+              '<span class="pkt-filterrow__label">Повод</span>' +
+              '<div class="pills" data-filter="occ" role="tablist" aria-label="Фильтр по поводу"></div>' +
+            '</div>' +
+            '<div class="pkt-filterrow">' +
+              '<span class="pkt-filterrow__label">Бюджет</span>' +
+              '<div class="pills" data-filter="budget" role="tablist" aria-label="Фильтр по бюджету"></div>' +
+            '</div>' +
+          '</div>' +
+
+          '<div class="mkt-pkgs mkt-pkgs--wide" data-grid aria-live="polite"></div>' +
+
+          '<div class="empty hide" data-empty>' +
+            '<div class="empty__icon" aria-hidden="true">🎈</div>' +
+            '<p class="empty__title">Под эти фильтры готового пакета пока нет</p>' +
+            '<p>Снимите часть фильтров или соберите свой набор — Pinkshar сведёт все услуги ' +
+              'в один заказ с фиксированной ценой.</p>' +
+            '<div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">' +
+              '<button class="btn btn--soft" type="button" data-reset>Сбросить фильтры</button>' +
+              '<a class="btn btn--primary" href="uslugi.html">Собрать свой набор</a>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</section>' +
+
+      // КАК ЭТО РАБОТАЕТ
+      '<section class="mkt-band mkt-band--ghost">' +
+        '<div class="mkt-band__inner">' +
+          '<div class="mkt-band__head mkt-band__head--center mkt-reveal">' +
+            '<h2 class="mkt-h2">От выбора пакета до готового праздника</h2>' +
+          '</div>' +
+          '<ol class="mkt-steps">' +
+            '<li class="mkt-step mkt-reveal" data-d="1"><span class="mkt-step__n">1</span>' +
+              '<h3 class="mkt-step__t">Выбираете пакет</h3>' +
+              '<p class="mkt-step__d">Один набор под повод — состав и цена уже собраны. Никаких поисков подрядчиков по отдельности.</p></li>' +
+            '<li class="mkt-step mkt-reveal" data-d="2"><span class="mkt-step__n">2</span>' +
+              '<h3 class="mkt-step__t">Собираете заказ</h3>' +
+              '<p class="mkt-step__d">Добавляете пакет в корзину, при желании меняете состав. Указываете дату и адрес одной заявкой.</p></li>' +
+            '<li class="mkt-step mkt-reveal" data-d="3"><span class="mkt-step__n">3</span>' +
+              '<h3 class="mkt-step__t">Платите один раз</h3>' +
+              '<p class="mkt-step__d">Оплата держится в эскроу до выполнения. Один чек на весь праздник — без перевода каждому исполнителю.</p></li>' +
+            '<li class="mkt-step mkt-reveal" data-d="4"><span class="mkt-step__n">4</span>' +
+              '<h3 class="mkt-step__t">Встречаете праздник</h3>' +
+              '<p class="mkt-step__d">Всё приезжает ко времени. Подтвердили выполнение — площадка распределяет выплаты подрядчикам.</p></li>' +
+          '</ol>' +
+        '</div>' +
+      '</section>' +
+
+      // FAQ
+      '<section class="mkt-band">' +
+        '<div class="mkt-band__inner">' +
+          '<div class="mkt-band__head mkt-band__head--center mkt-reveal">' +
+            '<h2 class="mkt-h2">Коротко о главном</h2>' +
+          '</div>' +
+          '<div class="mkt-faq">' +
+            faqItem('Что входит в цену пакета?',
+              'Всё, что перечислено в составе: шары, услуги подрядчиков, доставка и согласование. Цена фиксированная — доплат на месте нет. Доставка по Москве обычно уже учтена в пакете.') +
+            faqItem('Можно изменить состав готового пакета?',
+              'Да. Пакет — удобная отправная точка: на странице пакета каждая позиция кликабельна, состав можно докупить или собрать с нуля из каталога услуг.') +
+            faqItem('Как работает один чек на разных подрядчиков?',
+              'Pinkshar собирает оплату в эскроу и сам распределяет выплаты исполнителям после выполнения. Вы платите один раз и за весь праздник сразу — площадка выступает гарантом сделки.') +
+            faqItem('Что если подрядчик подведёт?',
+              'Деньги придерживаются в эскроу до подтверждения выполнения. Если что-то пошло не так — возврат или замена исполнителя. Все подрядчики проходят модерацию площадки.') +
+          '</div>' +
+        '</div>' +
+      '</section>' +
+
+      // CTA
+      '<section class="mkt-ctaband">' +
+        '<div class="mkt-ctaband__inner">' +
+          '<div>' +
+            '<h2 class="mkt-ctaband__title">Не нашли идеальный пакет?</h2>' +
+            '<p class="mkt-ctaband__lead">Соберите праздник под себя — выберите услуги и добавьте их в один заказ.</p>' +
+          '</div>' +
+          '<div class="mkt-ctaband__cta">' +
+            '<a class="btn btn--white btn--lg" href="uslugi.html">Все услуги</a>' +
+            '<a class="btn btn--onpink-ghost btn--lg" href="povod.html">Выбрать по поводу</a>' +
+          '</div>' +
+        '</div>' +
+      '</section>';
+
+    function faqItem(q, a) {
+      return '<div class="mkt-faq__item">' +
+        '<button class="mkt-faq__q" type="button">' + esc(q) + '<span class="mkt-faq__icon" aria-hidden="true"></span></button>' +
+        '<div class="mkt-faq__a"><div class="mkt-faq__a-inner">' + esc(a) + '</div></div>' +
+      '</div>';
+    }
+
+    /* ---- фильтр-пилюли: повод ---- */
+    var occHost = view.querySelector('[data-filter="occ"]');
+    var occUsed = {};
+    PKGS.forEach(function (p) { occUsed[p.occasion] = (occUsed[p.occasion] || 0) + 1; });
+    var occPills = [{ id: 'all', name: 'Все пакеты', emoji: '✨', count: PKGS.length }];
+    (P.occasions || []).forEach(function (o) {
+      if (occUsed[o.id]) occPills.push({ id: o.id, name: o.name, emoji: o.emoji, count: occUsed[o.id] });
+    });
+    occHost.innerHTML = occPills.map(function (o, i) {
+      return '<button class="pill' + (i === 0 ? ' active' : '') + '" type="button" role="tab" ' +
+        'aria-selected="' + (i === 0 ? 'true' : 'false') + '" data-val="' + esc(o.id) + '">' +
+        '<span class="emoji" aria-hidden="true">' + esc(o.emoji) + '</span>' + esc(o.name) +
+        '<span class="pkt-pill__n">' + o.count + '</span></button>';
+    }).join('');
+
+    /* ---- фильтр-пилюли: бюджет ---- */
+    var budgetHost = view.querySelector('[data-filter="budget"]');
+    budgetHost.innerHTML = BUDGETS.map(function (b, i) {
+      return '<button class="pill' + (i === 0 ? ' active' : '') + '" type="button" role="tab" ' +
+        'aria-selected="' + (i === 0 ? 'true' : 'false') + '" data-val="' + esc(b.id) + '">' +
+        esc(b.label) + '</button>';
+    }).join('');
+
+    /* ---- рендер сетки ---- */
+    var grid = view.querySelector('[data-grid]');
+    var empty = view.querySelector('[data-empty]');
+    function render() {
+      var list = PKGS.filter(matches);
+      grid.innerHTML = list.map(cardHTML).join('');
+      empty.classList.toggle('hide', list.length > 0);
+      // карточки — основной контент: мягко раскрываем после вставки (transform/opacity)
+      setTimeout(function () {
+        grid.querySelectorAll('.mkt-reveal').forEach(function (el) { el.classList.add('is-in'); });
+      }, 30);
+    }
+
+    /* ---- переключение пилюль ---- */
+    function bindFilter(host, key) {
+      host.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-val]');
+        if (!btn) return;
+        state[key] = btn.getAttribute('data-val');
+        host.querySelectorAll('.pill').forEach(function (b) {
+          var on = b === btn;
+          b.classList.toggle('active', on);
+          b.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        render();
+      });
+    }
+    bindFilter(occHost, 'occ');
+    bindFilter(budgetHost, 'budget');
+
+    /* ---- сброс из пустого состояния ---- */
+    view.addEventListener('click', function (e) {
+      if (!e.target.closest('[data-reset]')) return;
+      state.occ = 'all'; state.budget = 'all';
+      [occHost, budgetHost].forEach(function (host) {
+        host.querySelectorAll('.pill').forEach(function (b, i) {
+          var on = i === 0;
+          b.classList.toggle('active', on);
+          b.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+      });
+      render();
+    });
+
+    render();
+  };
+  </script>
+
+  <style>
+    /* page-scoped: каталог пакетов (.pkt-*). Реюзает .mkt-pkg / токены / тени,
+       не переопределяет общие переменные. */
+    .pkt-hero .mkt-breadcrumb{margin-bottom:var(--s-4)}
+
+    /* карточка-ссылка целиком (реюзает .mkt-pkg) */
+    .pkt-card{text-decoration:none;color:inherit}
+    .pkt-card:focus-visible{outline:2px solid var(--pink-strong);outline-offset:2px}
+    .pkt-card .mkt-pkg__name{transition:color .14s ease}
+    .pkt-card:hover .mkt-pkg__name{color:var(--pink-strong)}
+
+    /* фильтр-блок */
+    .pkt-filters{display:flex;flex-direction:column;gap:var(--s-3);margin-bottom:var(--s-6)}
+    .pkt-filterrow{display:flex;align-items:flex-start;gap:var(--s-4);flex-wrap:wrap}
+    .pkt-filterrow__label{font-size:13px;font-weight:700;color:var(--ink);
+      padding-top:7px;min-width:62px;flex:none}
+    .pkt-pill__n{margin-left:7px;font-family:var(--font-mono);font-size:11px;
+      color:var(--muted);font-weight:600}
+    .pill.active .pkt-pill__n{color:rgba(255,255,255,.85)}
+
+    /* состав-теги в карточке */
+    .pkt-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:var(--s-5)}
+    .pkt-tag{font-size:12px;line-height:1.3;color:var(--plum);background:var(--pink-ghost);
+      border-radius:var(--r-pill);padding:5px 11px}
+    .pkt-tag--more{color:var(--muted);background:var(--bg);border:1px solid var(--line)}
+
+    /* выгода */
+    .pkt-save{margin:-8px 0 var(--s-4);font-size:12.5px;font-weight:600;
+      color:var(--good-text);display:flex;align-items:center;gap:6px}
+    .pkt-save::before{content:"";width:5px;height:5px;border-radius:50%;
+      background:currentColor;flex:none}
+
+    /* «открыть пакет» в подвале карточки */
+    .mkt-pkg__foot{display:flex;flex-direction:column}
+    .pkt-card__go{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;
+      font-weight:600;color:var(--pink-strong)}
+    .pkt-card__go svg{transition:transform .16s ease}
+    .pkt-card:hover .pkt-card__go svg{transform:translateX(3px)}
+
+    .mkt-pkgs--wide{grid-template-columns:repeat(3,1fr)}
+    @media (max-width:980px){.mkt-pkgs--wide{grid-template-columns:1fr 1fr}}
+    @media (max-width:680px){
+      .mkt-pkgs--wide{grid-template-columns:1fr}
+      .pkt-filterrow__label{min-width:0}
+    }
+  </style>
+</body>
+</html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Пакет — Pinkshar</title>
+  <meta name="description" content="Пакет «под ключ» Pinkshar: весь праздник в один чек. Состав из позиций разных подрядчиков, цена комплекта и экономия. Оплата защищена в эскроу.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="assets/app.css?v=8">
+</head>
+<body>
+  <div data-mkt-header></div>
+
+  <main id="view">
+    <!-- Карточка пакета-композита. renderPage читает ?id= из PINK.packages. -->
+    <div class="wrap" data-paket-root></div>
+  </main>
+
+  <footer data-mkt-footer></footer>
+
+  <script src="assets/data.js?v=8"></script>
+  <script src="assets/shell.js?v=8"></script>
+  <script>
+  /* ============================================================
+     ПАКЕТ — карточка композита. Читает ?id=, ищет в PINK.packages.
+     Состав (items[]) кликабелен: product → tovar.html, service → usluga.html.
+     CTA «Собрать праздник» добавляет все товарные позиции в корзину.
+     Без попапов, drill-in навигацией.
+     ============================================================ */
+  window.renderPage = function () {
+    var S = window.SHELL, P = window.PINK;
+    var root = document.querySelector('[data-paket-root]');
+    if (!root || !S || !P) return;
+
+    var packages = P.packages || [];
+    var id = S.qparam('id');
+    var pkg = id && P.packageById ? P.packageById(id) : null;
+    var notFound = false;
+    if (!pkg) { notFound = !!id; pkg = packages[0]; }
+    if (!pkg) {
+      root.innerHTML =
+        S.crumbs([{ label: 'Главная', href: 'index.html' }, { label: 'Пакет' }]) +
+        '<div class="empty"><div class="empty__icon">🎁</div>' +
+        '<div class="empty__title">Пакет не найден</div>' +
+        '<p>Выберите пакет из каталога.</p>' +
+        '<div style="margin-top:16px"><a class="btn btn--primary" href="pakety.html">Все пакеты</a></div></div>';
+      return;
+    }
+    document.title = pkg.name + ' — Pinkshar';
+
+    var occ = S.occasionById ? S.occasionById(pkg.occasion) : null;
+    var items = pkg.items || [];
+    var sumByPiece = items.reduce(function (s, it) { return s + (it.price || 0); }, 0);
+    var save = (pkg.oldPrice ? pkg.oldPrice : sumByPiece) - pkg.price;
+
+    /* occasionId (birthday/discharge/…) → slug повод-страницы (den-rozhdeniya/…).
+       Строим обратную карту из PINK.occasionDetail (там occasionId), без хардкода:
+       если для повода есть отдельная страница — крошка ведёт «Главная / <Повод> / <пакет>»,
+       иначе фолбэк «Главная / Пакеты / <пакет>». */
+    function povodSlugForOccasion(occId) {
+      var det = P.occasionDetail || {};
+      var found = null;
+      Object.keys(det).forEach(function (slug) {
+        if (det[slug] && det[slug].occasionId === occId) found = slug;
+      });
+      return found;
+    }
+
+    /* эскроу-иконка (как в PDP) */
+    var escrowIcon = '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">' +
+      '<path d="M9 1.5l6 2.2v4.1c0 3.7-2.5 6.4-6 7.7-3.5-1.3-6-4-6-7.7V3.7L9 1.5Z" stroke="currentColor" stroke-width="1.4"/>' +
+      '<path d="M6.2 9l1.9 1.9L12 6.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    var goIcon = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    function starsLine(r) { var f = Math.round(r || 0), o = ''; for (var i = 0; i < 5; i++) o += i < f ? '★' : '☆'; return o; }
+    function ratingText(r) { return (r || 0).toFixed(1).replace('.', ','); }
+
+    /* крошки: «Главная / <Повод> / <пакет>», если у повода есть страница; иначе «… / Пакеты / …» */
+    var povodSlug = occ ? povodSlugForOccasion(pkg.occasion) : null;
+    var crumbItems = [{ label: 'Главная', href: 'index.html' }];
+    if (povodSlug && occ) {
+      crumbItems.push({ label: occ.name, href: S.povodHref(povodSlug) });
+    } else {
+      crumbItems.push({ label: 'Пакеты', href: 'pakety.html' });
+    }
+    crumbItems.push({ label: pkg.name });
+    var crumbs = S.crumbs(crumbItems);
+
+    /* галерея — переиспользует .pdp-gallery */
+    var photos = (pkg.photos && pkg.photos.length) ? pkg.photos : [''];
+    var mainPhoto =
+      '<div class="pdp-gallery__main' + (photos[0] ? '' : ' pdp-gallery__main--fallback') + '" data-emoji="' + S.esc(pkg.emoji || '🎁') + '" data-gallery-main>' +
+        '<img src="' + S.esc(photos[0] || '') + '" alt="' + S.esc(pkg.name) + '" ' +
+          "onerror=\"this.closest('.pdp-gallery__main').classList.add('pdp-gallery__main--fallback')\"></div>";
+    var thumbs = photos.length > 1 ? '<div class="pdp-gallery__thumbs">' + photos.map(function (src, i) {
+      return '<button type="button" class="pdp-gallery__thumb' + (i === 0 ? ' active' : '') + '" data-thumb="' + i + '" aria-label="Фото ' + (i + 1) + '">' +
+        '<img src="' + S.esc(src) + '" alt="" onerror="this.style.display=\'none\'"></button>';
+    }).join('') + '</div>' : '';
+    var gallery = '<div class="pdp-gallery">' + mainPhoto + thumbs + '</div>';
+
+    /* состав — кликабельные строки */
+    function itemHref(it) {
+      return it.type === 'service' ? S.uslugaHref(it.slug) : S.tovarHref(it.id);
+    }
+    function itemPhoto(it) {
+      if (it.type === 'product') { var p = S.productById(it.id); return p && p.photos ? p.photos[0] : ''; }
+      var offs = S.offersByService(it.slug); return offs[0] && offs[0].portfolioPhotos ? offs[0].portfolioPhotos[0] : '';
+    }
+    var itemsHTML = '<div class="paket-items">' + items.map(function (it) {
+      var ph = itemPhoto(it);
+      return '<a class="paket-item" href="' + itemHref(it) + '">' +
+        '<span class="paket-item__media' + (ph ? '' : ' paket-item__media--fallback') + '" data-emoji="' + S.esc(pkg.emoji || '🎈') + '">' +
+          '<img src="' + S.esc(ph) + '" alt="" loading="lazy" onerror="this.closest(\'.paket-item__media\').classList.add(\'paket-item__media--fallback\')"></span>' +
+        '<span class="paket-item__body">' +
+          '<span class="paket-item__type">' + (it.type === 'service' ? 'Услуга' : 'Товар') + '</span>' +
+          '<span class="paket-item__name">' + S.esc(it.label) + '</span>' +
+        '</span>' +
+        '<span class="paket-item__price">' + S.money(it.price) + '</span>' +
+        '<span class="paket-item__go">' + goIcon + '</span>' +
+      '</a>';
+    }).join('') + '</div>';
+
+    /* отзывы по поводу пакета — из PINK.testimonials (привязаны к orderId → occasion).
+       Берём отзывы заказов того же повода, добор любыми до 3 шт. Без выдумывания. */
+    var allTest = (P.testimonials || []).map(function (t) {
+      var o = S.orderById ? S.orderById(t.orderId) : null;
+      return { rating: t.rating, text: t.text, author: o ? o.client : '', date: o ? o.date : '', occasion: o ? o.occasion : '' };
+    });
+    var revMatch = allTest.filter(function (t) { return t.occasion === pkg.occasion; });
+    var revList = revMatch.slice();
+    allTest.forEach(function (t) { if (revList.length < 3 && revList.indexOf(t) === -1) revList.push(t); });
+    revList = revList.slice(0, 3);
+    var reviewsHTML = revList.length ?
+      '<section class="pdp-section"><h2 class="pdp-section__title">Отзывы о таких праздниках</h2>' +
+        '<div class="reviews">' + revList.map(function (rv) {
+          return '<article class="review"><div class="review__main">' +
+            '<div class="review__head">' +
+              '<span class="review__author">' + S.esc(rv.author || 'Клиент Pinkshar') + '</span>' +
+              '<span class="review__stars" aria-label="Оценка ' + rv.rating + ' из 5">' + starsLine(rv.rating) + '</span>' +
+            '</div>' +
+            '<p class="review__text">' + S.esc(rv.text) + '</p>' +
+            (rv.date ? '<span class="muted" style="font-size:12.5px;font-family:var(--font-mono)">' + S.dateShort(rv.date) + '</span>' : '') +
+          '</div></article>';
+        }).join('') + '</div>' +
+      '</section>' : '';
+
+    /* похожие пакеты — все остальные из PINK.packages (карточка в стиле .prod-card) */
+    var similar = (packages || []).filter(function (p) { return p.id !== pkg.id; });
+    function pkgCard(p) {
+      var ph = (p.photos && p.photos[0]) || '';
+      var pSum = (p.items || []).reduce(function (s, it) { return s + (it.price || 0); }, 0);
+      var pSave = (p.oldPrice ? p.oldPrice : pSum) - p.price;
+      return '<a class="prod-card" href="' + S.paketHref(p.id) + '">' +
+        '<div class="prod-card__media' + (ph ? '' : ' prod-card__media--fallback') + '" data-emoji="' + S.esc(p.emoji || '🎁') + '">' +
+          '<img src="' + S.esc(ph) + '" alt="' + S.esc(p.name) + '" loading="lazy" ' +
+            "onerror=\"this.closest('.prod-card__media').classList.add('prod-card__media--fallback')\">" +
+          (p.oldPrice ? '<span class="prod-card__sale">−' + Math.round((1 - p.price / p.oldPrice) * 100) + '%</span>' : '') +
+        '</div>' +
+        '<div class="prod-card__body">' +
+          '<div class="prod-card__name">' + S.esc((p.emoji ? p.emoji + ' ' : '') + p.name) + '</div>' +
+          (p.tag ? '<div class="prod-card__partner">' + S.esc(p.tag) + ' · ' + (p.items ? p.items.length : 0) + ' позиций</div>' : '') +
+          '<div class="prod-card__foot"><div class="prod-card__price">' +
+            '<span class="prod-card__amount">' + S.money(p.price) + '</span>' +
+            (p.oldPrice ? '<span class="prod-card__old">' + S.money(p.oldPrice) + '</span>' : '') +
+          '</div>' + (pSave > 0 ? '<span class="prod-card__from" style="color:var(--good-text)">−' + S.money(pSave) + '</span>' : '') + '</div>' +
+        '</div>' +
+      '</a>';
+    }
+    var similarHTML = similar.length ?
+      '<section class="pdp-section pdp-related"><h2 class="pdp-section__title">Похожие пакеты</h2>' +
+        '<div class="prod-grid">' + similar.map(pkgCard).join('') + '</div>' +
+      '</section>' : '';
+
+    /* правая колонка покупки */
+    var buy =
+      '<aside class="paket-buy">' +
+        (pkg.tag ? '<span class="badge badge--new paket-buy__tag">' + S.esc(pkg.tag) + '</span>' : '') +
+        '<h1 class="paket-buy__title">' + S.esc((pkg.emoji ? pkg.emoji + ' ' : '') + pkg.name) + '</h1>' +
+        '<p class="paket-buy__desc">' + S.esc(pkg.desc || '') + '</p>' +
+        '<div class="paket-buy__price">' +
+          '<span class="paket-buy__amount">' + S.money(pkg.price) + '</span>' +
+          (pkg.oldPrice ? '<span class="paket-buy__old">' + S.money(pkg.oldPrice) + '</span>' : '') +
+        '</div>' +
+        (save > 0 ? '<span class="paket-save">Экономия ' + S.money(save) + ' vs поштучно</span>' : '') +
+        '<div class="pdp-escrow">' + escrowIcon +
+          '<span>Один чек на весь праздник. Оплата защищена в эскроу до выполнения.</span></div>' +
+        '<div class="paket-buy__cta">' +
+          '<button class="btn btn--primary btn--lg btn--block" data-add-pkg>Собрать праздник</button>' +
+          '<a class="btn btn--ghost btn--block" href="korzina.html">Перейти в корзину</a>' +
+        '</div>' +
+      '</aside>';
+
+    var fallbackNote = notFound ?
+      '<div class="empty" style="padding:16px;text-align:left;background:var(--pink-ghost);border-radius:var(--r-md);margin-bottom:8px">' +
+        '<p style="margin:0">Пакет по ссылке не найден — показываем популярный. ' +
+        '<a href="pakety.html" style="color:var(--pink-strong);font-weight:600">Ко всем пакетам →</a></p></div>' : '';
+
+    root.innerHTML =
+      crumbs + fallbackNote +
+      '<div class="paket">' +
+        '<div class="paket__left">' + gallery +
+          '<section class="pdp-section"><h2 class="pdp-section__title">Что входит в пакет</h2>' +
+          '<p class="muted" style="margin:-8px 0 16px;font-size:13.5px">Каждая позиция кликабельна — можно открыть и заменить.</p>' +
+          itemsHTML + '</section>' +
+          reviewsHTML +
+          similarHTML +
+        '</div>' +
+        buy +
+      '</div>';
+
+    /* галерея-миниатюры */
+    var mainEl = root.querySelector('[data-gallery-main]');
+    var mainImg = mainEl ? mainEl.querySelector('img') : null;
+    root.querySelectorAll('[data-thumb]').forEach(function (t) {
+      t.addEventListener('click', function () {
+        var i = parseInt(t.getAttribute('data-thumb'), 10);
+        if (!mainEl || !mainImg) return;
+        mainEl.classList.remove('pdp-gallery__main--fallback');
+        mainImg.style.display = ''; mainImg.src = photos[i] || '';
+        root.querySelectorAll('[data-thumb]').forEach(function (x) { x.classList.toggle('active', x === t); });
+      });
+    });
+
+    /* «Собрать праздник» — добавить все товарные позиции в корзину (услуги — через подбор) */
+    var addBtn = root.querySelector('[data-add-pkg]');
+    if (addBtn) {
+      var lbl = addBtn.textContent, timer = null;
+      addBtn.addEventListener('click', function () {
+        items.forEach(function (it) { if (it.type === 'product' && it.id) S.addToCart(it.id, 1); });
+        addBtn.textContent = 'Добавлено в корзину ✓';
+        addBtn.classList.add('btn--soft'); addBtn.classList.remove('btn--primary');
+        clearTimeout(timer);
+        timer = setTimeout(function () {
+          addBtn.textContent = lbl; addBtn.classList.add('btn--primary'); addBtn.classList.remove('btn--soft');
+        }, 1800);
+      });
+    }
+  };
+  </script>
+</body>
+</html>

@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pinkshar — панель платформы</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="assets/app.css?v=8">
+  <style>
+    /* page-scoped: префикс .pf- — не переопределяем общие токены */
+    .pf-head{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s-4);
+      flex-wrap:wrap;margin-bottom:var(--s-5)}
+    .pf-head h1{font-size:28px}
+    .pf-head .pf-sub{color:var(--muted);font-size:14px;margin:6px 0 0}
+    .pf-tabs{margin-bottom:var(--s-5)}
+    .pf-kpis{margin-bottom:var(--s-5)}
+    .pf-kpis .card{padding:var(--s-4) var(--s-5)}
+    .pf-charts{display:grid;grid-template-columns:1.4fr 1fr;gap:var(--s-4);margin-bottom:var(--s-5)}
+    .pf-charts--3{grid-template-columns:1fr 1fr;gap:var(--s-4)}
+    .pf-chart{width:100%;height:260px}
+    .pf-chart--tall{height:300px}
+    .pf-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-3);margin-bottom:var(--s-4)}
+    .pf-toolbar .search{flex:1;min-width:200px}
+    .pf-filterlbl{font-size:12px;color:var(--muted);font-weight:600;margin-right:2px}
+    .pf-money-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-4);margin-bottom:var(--s-5)}
+    .pf-ledgerflag{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+    .pf-modrow{display:flex;gap:var(--s-4);align-items:flex-start;
+      padding:var(--s-4) 0}
+    .pf-check{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+    .pf-check .ic{width:18px;height:18px;border-radius:50%;display:inline-flex;
+      align-items:center;justify-content:center;font-size:11px;flex:none}
+    .pf-check .ic.ok{background:var(--good-soft);color:var(--good)}
+    .pf-check .ic.wait{background:var(--amber-soft);color:var(--amber)}
+    .pf-checks{display:flex;flex-wrap:wrap;gap:var(--s-4) var(--s-5);margin:10px 0 0}
+    .pf-toprow{display:flex;align-items:center;gap:var(--s-3);padding:var(--s-3) 0}
+    .pf-toprow .pf-barwrap{flex:1}
+    .pf-toprow .pf-tname{min-width:150px;font-weight:600;font-size:14px}
+    .pf-toprow .pf-tval{font-family:var(--font-mono);font-size:13px;color:var(--muted);
+      min-width:92px;text-align:right}
+    .pf-drawer-line{display:flex;justify-content:space-between;gap:var(--s-3);
+      padding:9px 0;font-size:14px}
+    .pf-drawer-line + .pf-drawer-line{border-top:1px solid var(--line)}
+    .pf-itemrow{display:flex;justify-content:space-between;gap:var(--s-3);padding:11px 0;
+      align-items:baseline}
+    .pf-itemrow .pf-isvc{font-weight:600;font-size:14px}
+    .pf-itemrow + .pf-itemrow{border-top:1px solid var(--line)}
+    .pf-empty-cell{padding:var(--s-7) 0}
+    /* визуально скрытый, но доступный скринридеру */
+    .pf-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+      clip:rect(0 0 0 0);white-space:nowrap;border:0}
+    /* заголовок-секция уровня h2 над группой карточек */
+    .pf-sec{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+      color:var(--muted);margin:0 0 var(--s-3)}
+    .pf-sec--mt{margin-top:var(--s-5)}
+    /* подсветка кликабельных строк подрядчиков */
+    #partnersBody tr.clickable{cursor:pointer}
+    /* мок-toast */
+    .pf-toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,12px);
+      background:var(--plum);color:#fff;font-size:14px;font-weight:600;
+      padding:11px 18px;border-radius:var(--r-pill);box-shadow:var(--sh-pop,0 8px 24px rgba(0,0,0,.18));
+      opacity:0;pointer-events:none;transition:opacity .22s ease,transform .22s ease;z-index:120}
+    .pf-toast.show{opacity:1;transform:translate(-50%,0)}
+    @media (max-width:860px){
+      .pf-charts,.pf-charts--3{grid-template-columns:1fr}
+      .pf-money-grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar" data-topbar></header>
+  <main id="view">
+    <div class="wrap page" id="pf"></div>
+  </main>
+  <script src="assets/data.js?v=8"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+  <script src="assets/shell.js?v=8"></script>
+  <script>
+  (function () {
+    var S = window.SHELL, P = window.PINK;
+    var K = P.platformKPI, TS = P.timeseries, L = P.labels;
+
+    /* токены палитры из CSS — читаем один раз */
+    var CSS = getComputedStyle(document.documentElement);
+    function tok(n){ return CSS.getPropertyValue(n).trim(); }
+    var C = {
+      pink: tok('--pink'), pinkStrong: tok('--pink-strong'), pinkSoft: tok('--pink-soft'),
+      plum: tok('--plum'), gold: tok('--gold'), good: tok('--good'), amber: tok('--amber'),
+      ink: tok('--ink'), muted: tok('--muted'), line: tok('--line'), bg: tok('--bg')
+    };
+    var FONT_UI = '"Schibsted Grotesk", sans-serif';
+    var FONT_MONO = '"IBM Plex Mono", monospace';
+
+    /* ---------- HTML-сборка экрана ---------- */
+    function svgSearch(){
+      return '<svg width="16" height="16" viewBox="0 0 16 16" fill="none">' +
+        '<circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6"/>' +
+        '<path d="M11 11l3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+    }
+
+    function kpiCards(){
+      var D = K.deltas || {};
+      // тип бейджа: 'delta' — рост со стрелкой, 'tag' — нейтральная подпись без стрелки
+      var items = [
+        { l:'GMV за период',     v:S.moneyShort(K.gmv),               kind:'delta', d:D.gmv,               up:true, s:'оборот маркетплейса' },
+        { l:'Выручка-комиссия',  v:S.moneyShort(K.revenueCommission), kind:'delta', d:D.revenueCommission, up:true, s:'15% с заказа' },
+        { l:'Заказов выполнено', v:S.num(K.orders),                   kind:'delta', d:D.orders,            up:true, s:K.partiesDone + ' праздников всего' },
+        { l:'Средний чек',       v:S.money(K.avgCheck),               kind:'delta', d:D.avgCheck,          up:true, s:'мин. заказ 3 500 ₽' },
+        { l:'Активных подрядчиков', v:S.num(K.activePartners),        kind:'tag',   d:'1 на модерации',    s:'8 в каталоге' },
+        { l:'Услуг в заказе',    v:String(K.attachRate).replace('.', ',') , kind:'tag', d:'услуг/заказ',   s:'пакеты «под повод»' }
+      ];
+      return '<div class="stat-grid pf-kpis">' + items.map(function(it){
+        var badge = it.kind === 'delta'
+          ? '<span class="stat__delta ' + (it.up?'up':'down') + '">' + S.esc(it.d) + '</span>'
+          : '<span class="badge badge--neutral" style="vertical-align:baseline">' + S.esc(it.d) + '</span>';
+        return '<div class="card"><div class="stat">' +
+          '<span class="stat__label">' + it.l + '</span>' +
+          '<span class="stat__value">' + it.v + '</span>' +
+          '<span class="stat__sub">' + badge + ' · ' + S.esc(it.s) + '</span>' +
+        '</div></div>';
+      }).join('') + '</div>';
+    }
+
+    /* ---------- ОБЗОР ---------- */
+    function overviewPanel(){
+      var gmvLast = TS.gmvByDay.gmv[TS.gmvByDay.gmv.length - 1];
+      var topOcc = TS.byOccasion[0], topSvc = TS.byService[0], funEnd = TS.funnel[TS.funnel.length-1], funStart = TS.funnel[0];
+      var convPct = Math.round(funEnd.value / funStart.value * 100);
+      return '<div data-panel="overview">' +
+        '<h2 class="pf-sec">Ключевые показатели</h2>' +
+        kpiCards() +
+        '<h2 class="pf-sec pf-sec--mt">Динамика и структура</h2>' +
+        '<div class="pf-charts">' +
+          '<div class="card"><div class="card__head"><h3 class="card__title">Динамика GMV и комиссии</h3>' +
+            '<span class="badge badge--ghost">9–22 июня</span></div>' +
+            '<div class="pf-chart pf-chart--tall" id="chGmv" role="img" aria-label="' +
+              S.esc('График динамики GMV и комиссии за 9–22 июня. Рост к 22 июня до ' + S.money(gmvLast) + ' в день.') + '"></div></div>' +
+          '<div class="card"><div class="card__head"><h3 class="card__title">Заказы по поводам</h3>' +
+            '<span class="badge badge--ghost">всего 738</span></div>' +
+            '<div class="pf-chart pf-chart--tall" id="chOcc" role="img" aria-label="' +
+              S.esc('Распределение 738 заказов по поводам. Лидирует «' + topOcc.name + '» — ' + topOcc.value + ' заказов.') + '"></div></div>' +
+        '</div>' +
+        '<div class="pf-charts pf-charts--3">' +
+          '<div class="card"><div class="card__head"><h3 class="card__title">GMV по услугам</h3></div>' +
+            '<div class="pf-chart" id="chSvc" role="img" aria-label="' +
+              S.esc('GMV по категориям услуг. Больше всего даёт «' + topSvc.name + '» — ' + S.money(topSvc.value) + '.') + '"></div></div>' +
+          '<div class="card"><div class="card__head"><h3 class="card__title">Воронка: заявка → выполнено</h3></div>' +
+            '<div class="pf-chart" id="chFunnel" role="img" aria-label="' +
+              S.esc('Воронка от ' + funStart.value + ' заявок до ' + funEnd.value + ' выполненных заказов, конверсия ' + convPct + '%.') + '"></div></div>' +
+        '</div>' +
+        '<h2 class="pf-sec pf-sec--mt">Подрядчики</h2>' +
+        topPartnersCard() +
+      '</div>';
+    }
+
+    function topPartnersCard(){
+      var rows = P.contractors.slice().sort(function(a,b){ return b.turnover - a.turnover; }).slice(0,5);
+      var max = rows[0].turnover;
+      return '<div class="card"><div class="card__head"><h3 class="card__title">Топ подрядчиков по обороту</h3>' +
+        '<span class="badge badge--ghost">за период</span></div>' +
+        '<div class="divide">' + rows.map(function(c){
+          var pct = Math.round(c.turnover / max * 100);
+          var svc = S.serviceById(c.category);
+          return '<div class="pf-toprow">' +
+            '<span class="avatar avatar--sm avatar--plum">' + S.esc(S.initials(c.name)) + '</span>' +
+            '<div class="pf-tname">' + S.esc(c.name) +
+              '<div class="muted" style="font-weight:500;font-size:12px">' + (svc?S.esc(svc.emoji+' '+svc.name):'') + '</div></div>' +
+            '<div class="pf-barwrap"><div class="bar"><div class="bar__fill" style="width:' + pct + '%"></div></div></div>' +
+            '<span class="pf-tval">' + S.money(c.turnover) + '</span>' +
+          '</div>';
+        }).join('') + '</div></div>';
+    }
+
+    /* ---------- ЗАКАЗЫ ---------- */
+    var STATUS_FILTERS = [
+      { k:'all', label:'Все' },
+      { k:'new', label:'Новые' },
+      { k:'confirmed', label:'Подтверждённые' },
+      { k:'paid', label:'Оплаченные' },
+      { k:'inwork', label:'В работе' },
+      { k:'done', label:'Выполненные' },
+      { k:'rejected', label:'Отклонённые' }
+    ];
+
+    function ordersPanel(){
+      var pills = STATUS_FILTERS.map(function(f,i){
+        return '<button class="pill' + (i===0?' active':'') + '" data-ord-filter="' + f.k + '">' + f.label + '</button>';
+      }).join('');
+      var occOpts = '<option value="all">Все поводы</option>' + P.occasions.map(function(o){
+        return '<option value="' + o.id + '">' + S.esc(o.emoji + ' ' + o.name) + '</option>';
+      }).join('');
+      var svcOpts = '<option value="all">Все услуги</option>' + P.services.map(function(s){
+        return '<option value="' + s.id + '">' + S.esc(s.emoji + ' ' + s.name) + '</option>';
+      }).join('');
+      return '<div class="panel hide" data-panel="orders">' +
+        '<h2 class="pf-sr">Заказы маркетплейса</h2>' +
+        '<div class="pf-toolbar">' +
+          '<div class="search"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--faint)">' + svgSearch() + '</span>' +
+            '<input class="input" type="search" id="ordSearch" placeholder="Поиск по № заказа, клиенту или адресу" aria-label="Поиск заказов"></div>' +
+          '<select class="select" id="ordOcc" aria-label="Фильтр по поводу">' + occOpts + '</select>' +
+          '<select class="select" id="ordSvc" aria-label="Фильтр по услуге">' + svcOpts + '</select>' +
+        '</div>' +
+        '<div class="pills" style="margin-bottom:var(--s-4)" id="ordPills">' + pills + '</div>' +
+        '<div class="card card--flush"><div class="table-wrap"><table class="table" id="ordTable">' +
+          '<thead><tr>' +
+            '<th>Заказ</th><th>Клиент</th><th>Повод</th><th>Дата</th>' +
+            '<th class="num">Сумма</th><th class="num">Комиссия</th><th>Статус</th><th>Оплата</th>' +
+          '</tr></thead><tbody id="ordBody"></tbody>' +
+        '</table></div></div>' +
+      '</div>';
+    }
+
+    function ordersRows(list){
+      if (!list.length) {
+        return '<tr><td colspan="8"><div class="empty pf-empty-cell">' +
+          '<div class="empty__icon">🎈</div>' +
+          '<div class="empty__title">Заказов не найдено</div>' +
+          '<p>Измените фильтр статуса или уточните поисковый запрос.</p></div></td></tr>';
+      }
+      return list.map(function(o){
+        var occ = S.occasionById(o.occasion);
+        return '<tr class="clickable" data-order="' + o.id + '">' +
+          '<td><span class="mono" style="font-weight:600">' + S.esc(o.id) + '</span></td>' +
+          '<td>' + S.esc(o.client) + '</td>' +
+          '<td>' + (occ ? S.esc(occ.emoji + ' ' + occ.name) : '—') + '</td>' +
+          '<td>' + S.dateShort(o.date) + '</td>' +
+          '<td class="num">' + S.money(o.total) + '</td>' +
+          '<td class="num">' + (o.commission ? S.money(o.commission) : '—') + '</td>' +
+          '<td>' + S.statusBadge(o.status) + '</td>' +
+          '<td><span class="badge badge--ghost">' + S.esc(L.payment[o.paymentStatus] || o.paymentStatus) + '</span></td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    /* ---------- ОПЛАТЫ И ВЫПЛАТЫ ---------- */
+    /* мутируемый стейт сумм — пересчитывается при выплате (мок) */
+    var moneyState = (function(){
+      var inEscrow = P.payments.filter(function(p){ return p.type==='in' && p.status==='escrow'; });
+      return {
+        escrowHeld: K.escrowHeld,
+        escrowCount: inEscrow.length,
+        commissionHeld: P.payments.filter(function(p){ return p.type==='commission'; })
+          .reduce(function(s,p){ return s+p.amount; }, 0),
+        paidOut: P.payments.filter(function(p){ return p.type==='payout'; })
+          .reduce(function(s,p){ return s+p.amount; }, 0)
+      };
+    })();
+    function moneyCardsHtml(){
+      var m = moneyState;
+      return '<div class="pf-money-grid">' +
+          '<div class="card"><div class="stat">' +
+            '<span class="stat__label">Удержано в эскроу</span>' +
+            '<span class="stat__value" data-money="escrow">' + S.money(m.escrowHeld) + '</span>' +
+            '<span class="stat__sub" data-money="escrowCount">' + m.escrowCount + ' заказов ждут выполнения</span></div></div>' +
+          '<div class="card"><div class="stat">' +
+            '<span class="stat__label">Комиссия удержана</span>' +
+            '<span class="stat__value" data-money="commission">' + S.money(m.commissionHeld) + '</span>' +
+            '<span class="stat__sub">15% с каждого заказа</span></div></div>' +
+          '<div class="card"><div class="stat">' +
+            '<span class="stat__label">Выплачено подрядчикам</span>' +
+            '<span class="stat__value" data-money="paidout">' + S.money(m.paidOut) + '</span>' +
+            '<span class="stat__sub">после удержания комиссии</span></div></div>' +
+        '</div>';
+    }
+    function renderMoneyCards(){
+      var grid = document.querySelector('[data-panel="money"] .pf-money-grid');
+      if (!grid) return;
+      grid.outerHTML = moneyCardsHtml();
+    }
+    function moneyPanel(){
+      var inEscrow = P.payments.filter(function(p){ return p.type==='in' && p.status==='escrow'; });
+      var moneyCards = moneyCardsHtml();
+
+      /* входящие платежи в эскроу — кандидаты на выплату */
+      var escrowRows = inEscrow.map(function(p){
+        var o = S.orderById(p.orderId);
+        var commission = o ? o.commission : 0;
+        var net = o ? (p.amount - o.commission) : 0;
+        return '<tr data-tx="' + p.id + '">' +
+          '<td><span class="mono" style="font-weight:600">' + S.esc(p.orderId) + '</span></td>' +
+          '<td>' + S.esc(p.party) + '</td>' +
+          '<td class="num">' + S.money(p.amount) + '</td>' +
+          '<td class="num">' + (o ? S.money(o.commission) : '—') + '</td>' +
+          '<td class="num">' + (o ? S.money(net) : '—') + '</td>' +
+          '<td><span class="badge badge--paid">В эскроу</span></td>' +
+          '<td style="text-align:right"><button class="btn btn--soft btn--sm" data-payout="' + p.orderId + '"' +
+            ' data-amount="' + p.amount + '" data-commission="' + commission + '" data-net="' + net + '">Выплатить</button></td>' +
+        '</tr>';
+      }).join('');
+
+      /* ledger всех движений */
+      var TXBADGE = { in:'badge--new', payout:'badge--inwork', commission:'badge--gold', refund:'badge--rejected' };
+      var ledgerRows = P.payments.slice().sort(function(a,b){ return a.date<b.date?1:-1; }).map(function(p){
+        var sign = (p.type==='in') ? '+' : (p.type==='refund' ? '−' : '−');
+        return '<tr>' +
+          '<td><span class="mono">' + S.esc(p.id) + '</span></td>' +
+          '<td><span class="mono">' + S.esc(p.orderId) + '</span></td>' +
+          '<td><span class="badge ' + (TXBADGE[p.type]||'badge--neutral') + '">' + S.esc(L.txType[p.type]||p.type) + '</span></td>' +
+          '<td>' + S.esc(p.party) + '</td>' +
+          '<td class="num">' + sign + ' ' + S.money(p.amount) + '</td>' +
+          '<td>' + S.dateShort(p.date) + '</td>' +
+          '<td><span class="badge ' + (p.status==='escrow'?'badge--confirmed':'badge--done') + '">' +
+            (p.status==='escrow'?'В эскроу':'Проведено') + '</span></td>' +
+        '</tr>';
+      }).join('');
+
+      return '<div class="panel hide" data-panel="money">' +
+        '<h2 class="pf-sec">Баланс эскроу и расчётов</h2>' +
+        moneyCards +
+        '<h2 class="pf-sec pf-sec--mt">Операции</h2>' +
+        '<div class="card card--flush" style="margin-bottom:var(--s-5)">' +
+          '<div class="card__head" style="padding:var(--s-5) var(--s-5) 0">' +
+            '<h3 class="card__title">Готовы к выплате</h3>' +
+            '<span class="badge badge--ghost">эскроу удерживает оплату до выполнения</span></div>' +
+          '<div class="table-wrap"><table class="table">' +
+            '<thead><tr><th>Заказ</th><th>Плательщик</th><th class="num">Оплата</th>' +
+              '<th class="num">Комиссия 15%</th><th class="num">К выплате</th><th>Статус</th><th></th></tr></thead>' +
+            '<tbody id="payoutBody">' + escrowRows + '</tbody></table></div></div>' +
+        '<div class="card card--flush">' +
+          '<div class="card__head" style="padding:var(--s-5) var(--s-5) 0">' +
+            '<h3 class="card__title">Журнал движений (ledger)</h3>' +
+            '<span class="pf-ledgerflag">' + P.payments.length + ' операций</span></div>' +
+          '<div class="table-wrap"><table class="table">' +
+            '<thead><tr><th>ID</th><th>Заказ</th><th>Тип</th><th>Сторона</th>' +
+              '<th class="num">Сумма</th><th>Дата</th><th>Статус</th></tr></thead>' +
+            '<tbody>' + ledgerRows + '</tbody></table></div></div>' +
+      '</div>';
+    }
+
+    /* ---------- ПОДРЯДЧИКИ ---------- */
+    var PT_STAT  = { active:'badge--paid', review:'badge--confirmed', paused:'badge--neutral' };
+    var PT_STATL = { active:'Активен', review:'На модерации', paused:'Пауза' };
+    var PARTNER_FILTERS = [
+      { k:'all', label:'Все' },
+      { k:'active', label:'Активные' },
+      { k:'review', label:'На модерации' },
+      { k:'paused', label:'На паузе' }
+    ];
+    function partnersRows(list){
+      if (!list.length) {
+        return '<tr><td colspan="8"><div class="empty pf-empty-cell">' +
+          '<div class="empty__icon">🧑‍🎨</div>' +
+          '<div class="empty__title">Подрядчиков не найдено</div>' +
+          '<p>В этом статусе сейчас никого нет.</p></div></td></tr>';
+      }
+      return list.map(function(c){
+        var svc = S.serviceById(c.category);
+        return '<tr class="clickable" data-partner="' + c.id + '">' +
+          '<td><div class="row gap"><span class="avatar avatar--sm">' + S.esc(S.initials(c.name)) + '</span>' +
+            '<div><div style="font-weight:600">' + S.esc(c.name) + '</div>' +
+            '<div class="muted" style="font-size:12px">' + S.esc(c.owner) + '</div></div></div></td>' +
+          '<td>' + (svc ? S.esc(svc.emoji + ' ' + svc.name) : '—') + '</td>' +
+          '<td><span class="rating"><span class="star">★</span>' + String(c.rating).replace('.', ',') +
+            ' <span class="count">' + c.reviews + '</span></span></td>' +
+          '<td class="num">' + c.orders + '</td>' +
+          '<td class="num">' + S.money(c.turnover) + '</td>' +
+          '<td class="num">' + c.commission + '%</td>' +
+          '<td class="num">' + c.sla + '%</td>' +
+          '<td><span class="badge ' + (PT_STAT[c.status]||'badge--neutral') + '">' + (PT_STATL[c.status]||c.status) + '</span></td>' +
+        '</tr>';
+      }).join('');
+    }
+    function partnersPanel(){
+      var pills = PARTNER_FILTERS.map(function(f,i){
+        return '<button class="pill' + (i===0?' active':'') + '" data-partner-filter="' + f.k + '">' + f.label + '</button>';
+      }).join('');
+      return '<div class="panel hide" data-panel="partners">' +
+        '<h2 class="pf-sr">Подрядчики платформы</h2>' +
+        '<div class="pills" style="margin-bottom:var(--s-4)" id="partnerPills">' + pills + '</div>' +
+        '<div class="card card--flush"><div class="table-wrap"><table class="table">' +
+          '<thead><tr><th>Подрядчик</th><th>Категория</th><th>Рейтинг</th>' +
+            '<th class="num">Заказов</th><th class="num">Оборот</th><th class="num">Ставка договора</th>' +
+            '<th class="num">SLA</th><th>Статус</th></tr></thead>' +
+          '<tbody id="partnersBody">' + partnersRows(P.contractors) + '</tbody></table></div></div>' +
+      '</div>';
+    }
+
+    /* ---------- МОДЕРАЦИЯ ---------- */
+    function moderationPanel(){
+      /* подрядчики на модерации/паузе из данных + один новый кандидат */
+      var queue = P.contractors.filter(function(c){ return c.status !== 'active'; });
+      var checkSets = {
+        c7: { 'ИП / самозанятость': 'ok', 'Портфолио (12 работ)': 'ok', 'Тест-заказ': 'wait' },
+        c8: { 'ИП / самозанятость': 'ok', 'Портфолио (8 работ)': 'ok', 'Тест-заказ': 'ok' }
+      };
+      var modCards = queue.map(function(c){
+        var svc = S.serviceById(c.category);
+        var checks = checkSets[c.id] || { 'ИП / самозанятость':'ok', 'Портфолио':'wait', 'Тест-заказ':'wait' };
+        var checksHtml = Object.keys(checks).map(function(label){
+          var st = checks[label];
+          return '<span class="pf-check"><span class="ic ' + st + '">' + (st==='ok'?'✓':'…') + '</span>' + S.esc(label) + '</span>';
+        }).join('');
+        var note = c.status === 'review'
+          ? 'Новый подрядчик. Ждём прохождения тест-заказа перед допуском к спросу Pinkshar.'
+          : 'На паузе: SLA ' + c.sla + '% ниже порога 90%. Решение — снять паузу или оставить.';
+        return '<div class="card"><div class="between" style="align-items:flex-start">' +
+            '<div class="row gap"><span class="avatar avatar--lg avatar--plum">' + S.esc(S.initials(c.name)) + '</span>' +
+              '<div><div style="font-weight:700;font-size:16px">' + S.esc(c.name) + '</div>' +
+                '<div class="muted" style="font-size:13px">' + S.esc(c.owner) + ' · ' + (svc?S.esc(svc.emoji+' '+svc.name):'') + '</div>' +
+                '<div class="row gap" style="margin-top:6px"><span class="rating"><span class="star">★</span>' +
+                  String(c.rating).replace('.',',') + ' <span class="count">' + c.reviews + '</span></span>' +
+                  '<span class="badge badge--ghost">' + S.money(c.turnover) + ' оборот</span></div></div></div>' +
+            '<span class="badge ' + (c.status==='review'?'badge--confirmed':'badge--neutral') + '">' +
+              (c.status==='review'?'На модерации':'Пауза') + '</span>' +
+          '</div>' +
+          '<div class="pf-checks">' + checksHtml + '</div>' +
+          '<p class="muted measure" style="margin:14px 0 0;font-size:13px">' + S.esc(note) + '</p>' +
+          '<div class="row gap" style="margin-top:14px">' +
+            '<button class="btn btn--primary btn--sm" data-approve="' + c.id + '">Допустить к спросу</button>' +
+            '<button class="btn btn--ghost btn--sm" data-request-docs="' + c.id + '">Запросить документы</button>' +
+            '<button class="btn btn--danger btn--sm" style="margin-left:auto" data-reject="' + c.id + '">Отклонить</button>' +
+          '</div></div>';
+      }).join('');
+
+      /* жалобы */
+      var complaints = [
+        { order:'PS-2613', who:'Алексей Морозов', party:'Артель аниматоров «Лучик»',
+          text:'Ведущий приехал с опозданием на 20 минут. Прошу частичный возврат за задержку.',
+          date:'2026-06-21', sev:'amber' },
+        { order:'PS-2611', who:'Мария Леонтьева', party:'Цветы «Пион и Я»',
+          text:'Букеты для участниц — 5 из 6 вместо заявленных. Один не довезли.',
+          date:'2026-06-19', sev:'bad' }
+      ];
+      var SEV = { amber:'badge--confirmed', bad:'badge--rejected' };
+      var complaintsHtml = complaints.map(function(cm){
+        return '<div class="pf-modrow">' +
+          '<span class="avatar avatar--sm">' + S.esc(S.initials(cm.who)) + '</span>' +
+          '<div style="flex:1">' +
+            '<div class="between" style="align-items:baseline">' +
+              '<div style="font-weight:600;font-size:14px">' + S.esc(cm.who) +
+                ' <span class="muted" style="font-weight:500">→ ' + S.esc(cm.party) + '</span></div>' +
+              '<span class="badge ' + SEV[cm.sev] + '">' + (cm.sev==='bad'?'Срочно':'Разбор') + '</span></div>' +
+            '<p class="measure" style="margin:6px 0 0;font-size:14px">' + S.esc(cm.text) + '</p>' +
+            '<div class="row gap" style="margin-top:10px">' +
+              '<span class="mono muted" style="font-size:12px">' + S.esc(cm.order) + ' · ' + S.dateShort(cm.date) + '</span>' +
+              '<span class="spacer"></span>' +
+              '<button class="btn btn--ghost btn--sm" data-open-chat="' + S.esc(cm.order) + '">Открыть чат</button>' +
+              '<button class="btn btn--soft btn--sm" data-refund="' + S.esc(cm.order) + '">Оформить возврат</button></div></div></div>';
+      }).join('');
+
+      return '<div class="panel hide" data-panel="moderation">' +
+        '<div class="pf-charts" style="grid-template-columns:1.1fr .9fr">' +
+          '<div class="stack" style="gap:var(--s-4)">' +
+            '<div class="between"><h2 style="font-size:16px">Новые подрядчики на отбор</h2>' +
+              '<span class="badge badge--new">' + queue.length + ' в очереди</span></div>' +
+            modCards +
+          '</div>' +
+          '<div class="stack" style="gap:var(--s-4)">' +
+            '<div class="between"><h2 style="font-size:16px">Жалобы и споры</h2>' +
+              '<span class="badge badge--rejected">' + complaints.length + ' открыто</span></div>' +
+            '<div class="card card--flush" style="padding:var(--s-2) var(--s-5)"><div class="divide">' + complaintsHtml + '</div></div>' +
+          '</div>' +
+        '</div></div>';
+    }
+
+    /* ---------- DRAWER заказа ---------- */
+    function orderDrawerHtml(o){
+      var occ = S.occasionById(o.occasion);
+      var net = o.total - o.commission;
+      var items = o.items.map(function(it){
+        var svc = S.serviceById(it.service);
+        return '<div class="pf-itemrow"><div>' +
+          '<div class="pf-isvc">' + (svc?S.esc(svc.emoji+' '):'') + S.esc(it.label) + '</div>' +
+          '<div class="muted" style="font-size:12px">' + S.esc(it.contractor) + '</div></div>' +
+          '<span class="price">' + S.money(it.amount) + '</span></div>';
+      }).join('');
+      var tlHtml = o.timeline.map(function(step, i){
+        var cls = step.state==='done' ? ' done' : (step.state==='current' ? ' current' : (step.state==='rejected' ? ' current' : ''));
+        var t = o.times[i] || '';
+        return '<li class="timeline__item' + cls + '">' +
+          '<div class="timeline__t">' + S.esc(step.t) + '</div>' +
+          (t ? '<div class="timeline__time">' + S.esc(t) + '</div>' : '') + '</li>';
+      }).join('');
+      var thread = S.threadByOrder(o.id);
+      var chatHtml = '';
+      if (thread) {
+        var bubbles = thread.messages.map(function(m){
+          var cls = m.from==='platform' ? 'bubble--platform' : (m.from==='client' ? 'bubble--in' : 'bubble--out');
+          var who = m.from==='client' ? thread.client : (m.from==='partner' ? thread.contractor : 'Pinkshar');
+          var attach = m.attachment ? '<div class="bubble__attach">📎 ' + S.esc(m.attachment) + '</div>' : '';
+          var meta = m.from==='platform' ? '' : '<div class="bubble__meta">' + S.esc(who) + ' · ' + S.esc(m.time) + '</div>';
+          return '<div class="bubble ' + cls + '">' + S.esc(m.text) + attach + meta + '</div>';
+        }).join('');
+        chatHtml = '<h4 style="margin:22px 0 12px">Переписка по заказу</h4>' +
+          '<div class="chat">' + bubbles + '</div>' +
+          '<div class="chat-input" style="padding:14px 0 0;border-top:1px solid var(--line);margin-top:14px">' +
+            '<input class="input" placeholder="Сообщение от лица платформы…" aria-label="Сообщение">' +
+            '<button class="btn btn--primary btn--sm">Отправить</button></div>';
+      } else {
+        chatHtml = '<div class="empty" style="padding:var(--s-5) 0">' +
+          '<div class="empty__icon">💬</div>' +
+          '<div class="empty__title">Переписки пока нет</div>' +
+          '<p>Чат появится после первого сообщения клиента или подрядчика.</p></div>';
+      }
+
+      return '<div class="drawer__head">' +
+          '<div><div class="kicker">' + S.esc(o.id) + '</div>' +
+            '<h3 style="margin-top:2px">' + (occ?S.esc(occ.emoji+' '+occ.name):'Заказ') + '</h3></div>' +
+          '<button class="icon-btn" data-close aria-label="Закрыть">✕</button></div>' +
+        '<div class="drawer__body">' +
+          '<div class="row gap" style="margin-bottom:14px">' + S.statusBadge(o.status) +
+            '<span class="badge badge--ghost">' + S.esc(L.payment[o.paymentStatus]||o.paymentStatus) + '</span></div>' +
+          '<div class="pf-drawer-line"><span class="muted">Клиент</span><span style="font-weight:600">' + S.esc(o.client) + '</span></div>' +
+          '<div class="pf-drawer-line"><span class="muted">Дата праздника</span><span style="font-weight:600">' + S.dateShort(o.date) + '</span></div>' +
+          '<div class="pf-drawer-line"><span class="muted">Адрес</span><span style="font-weight:600;text-align:right;max-width:60%">' + S.esc(o.address) + '</span></div>' +
+
+          '<h4 style="margin:22px 0 4px">Состав заказа</h4>' +
+          '<div>' + items + '</div>' +
+
+          '<div class="pf-drawer-line" style="margin-top:16px"><span class="muted">Итого с клиента</span>' +
+            '<span class="price price--big">' + S.money(o.total) + '</span></div>' +
+          '<div class="pf-drawer-line"><span class="muted">Комиссия Pinkshar (15%)</span>' +
+            '<span class="price" style="color:var(--pink-strong)">' + (o.commission?S.money(o.commission):'—') + '</span></div>' +
+          '<div class="pf-drawer-line"><span class="muted">К выплате подрядчикам</span>' +
+            '<span class="price">' + S.money(net) + '</span></div>' +
+
+          '<h4 style="margin:22px 0 14px">Статус заказа</h4>' +
+          '<ul class="timeline">' + tlHtml + '</ul>' +
+
+          chatHtml +
+        '</div>';
+    }
+
+    /* ---------- DRAWER подрядчика ---------- */
+    function partnerOrders(c){
+      var svc = S.serviceById(c.category);
+      // заказы, где есть позиция этого подрядчика
+      return P.orders.filter(function(o){
+        return o.items.some(function(i){ return i.contractorId === c.id; });
+      }).slice(0, 5).map(function(o){
+        var occ = S.occasionById(o.occasion);
+        var amt = o.items.filter(function(i){ return i.contractorId === c.id; })
+          .reduce(function(s,i){ return s + i.amount; }, 0);
+        return '<div class="pf-itemrow"><div>' +
+          '<div class="pf-isvc">' + (occ?S.esc(occ.emoji+' '+occ.name):S.esc(o.id)) + '</div>' +
+          '<div class="muted" style="font-size:12px">' + S.esc(o.id) + ' · ' + S.dateShort(o.date) + '</div></div>' +
+          '<span class="price">' + S.money(amt) + '</span></div>';
+      }).join('') || '<p class="muted" style="font-size:13px;margin:10px 0 0">Заказов за период нет.</p>';
+    }
+    function partnerDrawerHtml(c){
+      var svc = S.serviceById(c.category);
+      var paused = c.status === 'paused';
+      var statusBadge = '<span class="badge ' + (PT_STAT[c.status]||'badge--neutral') + '">' + (PT_STATL[c.status]||c.status) + '</span>';
+      var toggleBtn = paused
+        ? '<button class="btn btn--primary btn--sm" data-partner-toggle="' + c.id + '" data-to="active">Снять с паузы</button>'
+        : '<button class="btn btn--ghost btn--sm" data-partner-toggle="' + c.id + '" data-to="paused">Поставить на паузу</button>';
+      return '<div class="drawer__head">' +
+          '<div class="row gap"><span class="avatar avatar--lg avatar--plum">' + S.esc(S.initials(c.name)) + '</span>' +
+            '<div><div class="kicker">' + (svc?S.esc(svc.emoji+' '+svc.name):'Подрядчик') + '</div>' +
+              '<h3 style="margin-top:2px">' + S.esc(c.name) + '</h3></div></div>' +
+          '<button class="icon-btn" data-close aria-label="Закрыть">✕</button></div>' +
+        '<div class="drawer__body">' +
+          '<div class="row gap" style="margin-bottom:14px">' + statusBadge +
+            '<span class="rating"><span class="star">★</span>' + String(c.rating).replace('.',',') +
+              ' <span class="count">' + c.reviews + '</span></span></div>' +
+          '<div class="pf-drawer-line"><span class="muted">Владелец</span><span style="font-weight:600">' + S.esc(c.owner) + '</span></div>' +
+          '<div class="pf-drawer-line"><span class="muted">Заказов за период</span><span style="font-weight:600">' + c.orders + '</span></div>' +
+          '<div class="pf-drawer-line"><span class="muted">Оборот</span><span style="font-weight:600">' + S.money(c.turnover) + '</span></div>' +
+          '<div class="pf-drawer-line"><span class="muted">Ставка договора</span><span style="font-weight:600">' + c.commission + '%</span></div>' +
+          '<div class="pf-drawer-line"><span class="muted">SLA</span>' +
+            '<span style="font-weight:600;color:' + (c.sla<90?'var(--bad)':'var(--good)') + '">' + c.sla + '%' +
+            (c.sla<90?' · ниже порога 90%':'') + '</span></div>' +
+          '<h4 style="margin:22px 0 4px">Последние заказы</h4>' +
+          '<div>' + partnerOrders(c) + '</div>' +
+          '<div class="row gap" style="margin-top:22px">' + toggleBtn +
+            '<button class="btn btn--soft btn--sm" data-partner-msg="' + c.id + '">Написать подрядчику</button></div>' +
+        '</div>';
+    }
+
+    /* ---------- ОТРИСОВКА СТРАНИЦЫ ---------- */
+    window.renderPage = function () {
+      var root = document.getElementById('pf');
+      var TABS = [
+        { k:'overview',   l:'Обзор' },
+        { k:'orders',     l:'Заказы' },
+        { k:'money',      l:'Оплаты и выплаты' },
+        { k:'partners',   l:'Подрядчики' },
+        { k:'moderation', l:'Модерация' }
+      ];
+      var tabBtns = TABS.map(function(t,i){
+        return '<button data-tab="' + t.k + '"' + (i===0?' class="active"':'') + '>' + t.l + '</button>';
+      }).join('');
+
+      root.innerHTML =
+        '<div class="pf-head"><div>' +
+          '<div class="kicker">Платформа Pinkshar · единое окно</div>' +
+          '<h1>Аналитика и операции</h1>' +
+          '<p class="pf-sub">Анализ заказов, приём оплат в эскроу, удержание комиссии и расчёты с подрядчиками.</p>' +
+        '</div>' +
+        '<div class="row gap">' +
+          '<div class="segmented" id="pfPeriod" role="group" aria-label="Период аналитики">' +
+            '<button data-period="7">7 дней</button>' +
+            '<button data-period="14" class="active">14 дней</button>' +
+            '<button data-period="30">30 дней</button>' +
+          '</div>' +
+          '<span class="trust"><span class="rating"><span class="star">★</span>' +
+            String(K.rating).replace('.',',') + ' <span class="count">' + K.ratingCount + '</span></span></span>' +
+          '<button class="btn btn--ghost btn--sm" data-export>Экспорт отчёта</button>' +
+        '</div></div>' +
+
+        '<div class="tabs pf-tabs" data-tabs data-tabs-scope="#pfPanels">' + tabBtns + '</div>' +
+
+        '<div id="pfPanels">' +
+          overviewPanel() +
+          ordersPanel() +
+          moneyPanel() +
+          partnersPanel() +
+          moderationPanel() +
+        '</div>' +
+
+        '<aside class="drawer" id="orderDrawer" aria-label="Детали заказа"></aside>';
+
+      /* первичная отрисовка таблицы заказов */
+      renderOrders();
+      /* графики обзора (видимы сразу) */
+      renderCharts();
+      /* обработчики страницы */
+      wireEvents();
+    };
+
+    /* ---------- состояние фильтров заказов ---------- */
+    var ordFilter = 'all', ordQuery = '', ordOcc = 'all', ordSvc = 'all';
+    function filteredOrders(){
+      return P.orders.filter(function(o){
+        if (ordFilter !== 'all' && o.status !== ordFilter) return false;
+        if (ordOcc !== 'all' && o.occasion !== ordOcc) return false;
+        if (ordSvc !== 'all' && !o.items.some(function(i){ return i.service === ordSvc; })) return false;
+        if (ordQuery) {
+          var hay = (o.id + ' ' + o.client + ' ' + o.address).toLowerCase();
+          if (hay.indexOf(ordQuery) === -1) return false;
+        }
+        return true;
+      });
+    }
+    function renderOrders(){
+      var body = document.getElementById('ordBody');
+      if (body) body.innerHTML = ordersRows(filteredOrders());
+    }
+
+    /* мок-toast */
+    var toastTimer;
+    function toast(msg){
+      var el = document.getElementById('pfToast');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'pfToast';
+        el.className = 'pf-toast';
+        el.setAttribute('role', 'status');
+        el.setAttribute('aria-live', 'polite');
+        document.body.appendChild(el);
+      }
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2600);
+    }
+
+    /* перерисовать таблицу подрядчиков под фильтр */
+    var partnerFilter = 'all';
+    function renderPartners(){
+      var body = document.getElementById('partnersBody');
+      if (!body) return;
+      var list = P.contractors.filter(function(c){
+        return partnerFilter === 'all' || c.status === partnerFilter;
+      });
+      body.innerHTML = partnersRows(list);
+    }
+
+    function wireEvents(){
+      var root = document.getElementById('pf');
+
+      /* фильтр-пилюли заказов */
+      var pills = document.getElementById('ordPills');
+      if (pills) pills.addEventListener('click', function(e){
+        var b = e.target.closest('[data-ord-filter]');
+        if (!b) return;
+        pills.querySelectorAll('.pill').forEach(function(p){ p.classList.toggle('active', p===b); });
+        ordFilter = b.getAttribute('data-ord-filter');
+        renderOrders();
+      });
+
+      /* поиск + фильтры повода/услуги */
+      var search = document.getElementById('ordSearch');
+      if (search) search.addEventListener('input', function(){
+        ordQuery = this.value.trim().toLowerCase();
+        renderOrders();
+      });
+      var occSel = document.getElementById('ordOcc');
+      if (occSel) occSel.addEventListener('change', function(){ ordOcc = this.value; renderOrders(); });
+      var svcSel = document.getElementById('ordSvc');
+      if (svcSel) svcSel.addEventListener('change', function(){ ordSvc = this.value; renderOrders(); });
+
+      /* фильтр-пилюли подрядчиков */
+      var pPills = document.getElementById('partnerPills');
+      if (pPills) pPills.addEventListener('click', function(e){
+        var b = e.target.closest('[data-partner-filter]');
+        if (!b) return;
+        pPills.querySelectorAll('.pill').forEach(function(p){ p.classList.toggle('active', p===b); });
+        partnerFilter = b.getAttribute('data-partner-filter');
+        renderPartners();
+      });
+
+      /* период аналитики (мок-сегмент) */
+      var period = document.getElementById('pfPeriod');
+      if (period) period.addEventListener('click', function(e){
+        var b = e.target.closest('[data-period]');
+        if (!b) return;
+        period.querySelectorAll('button').forEach(function(x){ x.classList.toggle('active', x===b); });
+        applyPeriod(parseInt(b.getAttribute('data-period'), 10));
+      });
+
+      /* делегированные клики по странице */
+      root.addEventListener('click', function(e){
+        /* клик по строке заказа → drawer */
+        var tr = e.target.closest('[data-order]');
+        if (tr) {
+          var o = S.orderById(tr.getAttribute('data-order'));
+          if (o) {
+            document.getElementById('orderDrawer').innerHTML = orderDrawerHtml(o);
+            S.openOverlay(document.getElementById('orderDrawer'));
+          }
+          return;
+        }
+        /* клик по строке подрядчика → drawer */
+        var ptr = e.target.closest('[data-partner]');
+        if (ptr) {
+          var c = S.contractorById(ptr.getAttribute('data-partner'));
+          if (c) {
+            document.getElementById('orderDrawer').innerHTML = partnerDrawerHtml(c);
+            S.openOverlay(document.getElementById('orderDrawer'));
+          }
+          return;
+        }
+        /* выплата (мок) — со сменой строки и пересчётом money-карточек */
+        var pay = e.target.closest('[data-payout]');
+        if (pay) {
+          var amount = +pay.getAttribute('data-amount');
+          var commission = +pay.getAttribute('data-commission');
+          var net = +pay.getAttribute('data-net');
+          var trp = pay.closest('tr');
+          trp.querySelector('td:last-child').innerHTML = '<span class="badge badge--done">Выплачено</span>';
+          trp.querySelector('td:nth-child(6)').innerHTML = '<span class="badge badge--done">Завершено</span>';
+          /* пересчёт стейта: эскроу ↓, комиссия проведена, выплачено ↑ */
+          moneyState.escrowHeld = Math.max(0, moneyState.escrowHeld - amount);
+          moneyState.escrowCount = Math.max(0, moneyState.escrowCount - 1);
+          moneyState.commissionHeld += commission;
+          moneyState.paidOut += net;
+          renderMoneyCards();
+          toast('Выплата ' + S.money(net) + ' проведена подрядчику');
+          return;
+        }
+        /* допуск подрядчика (мок) */
+        var ap = e.target.closest('[data-approve]');
+        if (ap) {
+          var cardEl = ap.closest('.card');
+          ap.closest('.row').innerHTML =
+            '<span class="badge badge--paid">Допущен к спросу Pinkshar</span>';
+          var bdg = cardEl.querySelector('.between .badge');
+          if (bdg) { bdg.className = 'badge badge--paid'; bdg.textContent = 'Активен'; }
+          toast('Подрядчик допущен к спросу Pinkshar');
+          return;
+        }
+        /* отклонить подрядчика (мок) */
+        var rj = e.target.closest('[data-reject]');
+        if (rj) {
+          var rcard = rj.closest('.card');
+          var rbadge = rcard.querySelector('.between .badge');
+          if (rbadge) { rbadge.className = 'badge badge--rejected'; rbadge.textContent = 'Отклонён'; }
+          rcard.style.opacity = '.55';
+          rj.closest('.row').innerHTML = '<span class="muted" style="font-size:13px">Заявка отклонена — карточка убрана из очереди.</span>';
+          toast('Заявка подрядчика отклонена');
+          return;
+        }
+        /* запросить документы (мок) */
+        var rd = e.target.closest('[data-request-docs]');
+        if (rd) { toast('Запрос документов отправлен подрядчику'); return; }
+        /* пауза / снятие с паузы из drawer'а (мок) */
+        var pt = e.target.closest('[data-partner-toggle]');
+        if (pt) {
+          var pc = S.contractorById(pt.getAttribute('data-partner-toggle'));
+          if (pc) {
+            pc.status = pt.getAttribute('data-to');
+            document.getElementById('orderDrawer').innerHTML = partnerDrawerHtml(pc);
+            renderPartners();
+            toast(pc.status === 'paused' ? 'Подрядчик поставлен на паузу' : 'Подрядчик снят с паузы');
+          }
+          return;
+        }
+        var pm = e.target.closest('[data-partner-msg]');
+        if (pm) { toast('Открыт чат с подрядчиком'); return; }
+        /* жалобы: чат / возврат (мок) */
+        var oc = e.target.closest('[data-open-chat]');
+        if (oc) { toast('Чат по заказу ' + oc.getAttribute('data-open-chat') + ' открыт'); return; }
+        var rf = e.target.closest('[data-refund]');
+        if (rf) {
+          var rfrow = rf.closest('.pf-modrow');
+          var sevBadge = rfrow.querySelector('.badge');
+          if (sevBadge) { sevBadge.className = 'badge badge--done'; sevBadge.textContent = 'Возврат оформлен'; }
+          rf.closest('.row').innerHTML = '<span class="muted" style="font-size:13px">Возврат по ' +
+            S.esc(rf.getAttribute('data-refund')) + ' оформлен.</span>';
+          toast('Возврат по ' + rf.getAttribute('data-refund') + ' оформлен');
+          return;
+        }
+        /* экспорт отчёта (мок) */
+        var ex = e.target.closest('[data-export]');
+        if (ex) { toast('Отчёт выгружен (CSV)'); return; }
+      });
+
+      /* отправка сообщения в чат drawer'а (мок) */
+      document.getElementById('orderDrawer').addEventListener('click', function(e){
+        var send = e.target.closest('.chat-input .btn');
+        if (!send) return;
+        var input = send.parentNode.querySelector('.input');
+        var txt = (input.value || '').trim();
+        if (!txt) { input.focus(); return; }
+        var chat = this.querySelector('.chat');
+        if (chat) {
+          var b = document.createElement('div');
+          b.className = 'bubble bubble--platform';
+          b.textContent = txt;
+          chat.appendChild(b);
+          chat.scrollTop = chat.scrollHeight;
+        }
+        input.value = '';
+        input.focus();
+      });
+    }
+
+    /* мок-период: меняем подписи бейджей «за период» и масштаб графика GMV */
+    function applyPeriod(days){
+      var map = { 7:'15–22 июня', 14:'9–22 июня', 30:'24 мая – 22 июня' };
+      document.querySelectorAll('[data-panel="overview"] .badge--ghost').forEach(function(b){
+        if (b.textContent.indexOf('июн') !== -1) b.textContent = map[days] || b.textContent;
+      });
+      if (charts.chGmv) {
+        var n = Math.min(days, TS.gmvByDay.labels.length);
+        charts.chGmv.setOption({
+          xAxis: { data: TS.gmvByDay.labels.slice(-n) },
+          series: [{ data: TS.gmvByDay.gmv.slice(-n) }, { data: TS.gmvByDay.commission.slice(-n) }]
+        });
+      }
+    }
+
+    /* ---------- ECHARTS ---------- */
+    var charts = {};
+    function makeChart(id, opt){
+      var el = document.getElementById(id);
+      if (!el || !window.echarts) return;
+      var ch = echarts.init(el);
+      ch.setOption(opt);
+      charts[id] = ch;
+    }
+    var BASE_TEXT = { fontFamily: FONT_UI, color: C.muted, fontSize: 12 };
+
+    function renderCharts(){
+      /* GMV + комиссия по дням */
+      makeChart('chGmv', {
+        grid: { left: 8, right: 14, top: 36, bottom: 24, containLabel: true },
+        legend: { top: 0, right: 0, icon: 'roundRect', itemWidth: 10, itemHeight: 10,
+          textStyle: BASE_TEXT, data:['GMV','Комиссия'] },
+        tooltip: { trigger: 'axis', backgroundColor:'#fff', borderColor:C.line, borderWidth:1,
+          textStyle:{ color:C.ink, fontFamily:FONT_UI },
+          valueFormatter: function(v){ return S.money(v); } },
+        xAxis: { type: 'category', data: TS.gmvByDay.labels,
+          axisLine:{ lineStyle:{ color:C.line } }, axisTick:{ show:false },
+          axisLabel: BASE_TEXT },
+        yAxis: { type: 'value', splitLine:{ lineStyle:{ color:C.line } },
+          axisLabel: Object.assign({}, BASE_TEXT, { formatter: function(v){ return (v/1000)+'к'; }, fontFamily:FONT_MONO }) },
+        series: [
+          { name:'GMV', type:'line', smooth:true, symbol:'circle', symbolSize:6,
+            data: TS.gmvByDay.gmv, lineStyle:{ width:3, color:C.pink },
+            itemStyle:{ color:C.pink },
+            areaStyle:{ color:{ type:'linear', x:0,y:0,x2:0,y2:1,
+              colorStops:[{offset:0,color:'rgba(229,20,125,.18)'},{offset:1,color:'rgba(229,20,125,0)'}] } } },
+          { name:'Комиссия', type:'line', smooth:true, symbol:'circle', symbolSize:5,
+            data: TS.gmvByDay.commission, lineStyle:{ width:2.5, color:C.gold },
+            itemStyle:{ color:C.gold } }
+        ]
+      });
+
+      /* поводы — donut */
+      var occColors = [C.pink, C.plum, C.gold, '#3B62C4', '#D67AA6', C.pinkStrong, C.amber];
+      makeChart('chOcc', {
+        tooltip:{ trigger:'item', backgroundColor:'#fff', borderColor:C.line, borderWidth:1,
+          textStyle:{ color:C.ink, fontFamily:FONT_UI },
+          formatter: function(p){ return p.name + ': <b>' + p.value + '</b> (' + p.percent + '%)'; } },
+        legend:{ orient:'vertical', right:0, top:'center', icon:'circle',
+          itemWidth:9, itemHeight:9, textStyle:BASE_TEXT, itemGap:9 },
+        series:[{ type:'pie', radius:['52%','78%'], center:['33%','52%'], avoidLabelOverlap:true,
+          itemStyle:{ borderColor:'#fff', borderWidth:2 },
+          label:{ show:true, position:'center', formatter:'738\nзаказов',
+            fontFamily:FONT_MONO, fontSize:15, fontWeight:600, color:C.ink, lineHeight:18 },
+          emphasis:{ label:{ show:true } },
+          data: TS.byOccasion.map(function(d,i){ return { name:d.name, value:d.value, itemStyle:{ color:occColors[i%occColors.length] } }; }) }]
+      });
+
+      /* услуги — горизонтальный bar */
+      var svc = TS.byService.slice().reverse();
+      makeChart('chSvc', {
+        grid:{ left:8, right:18, top:10, bottom:6, containLabel:true },
+        tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, backgroundColor:'#fff',
+          borderColor:C.line, borderWidth:1, textStyle:{ color:C.ink, fontFamily:FONT_UI },
+          valueFormatter:function(v){ return S.money(v); } },
+        xAxis:{ type:'value', splitLine:{ lineStyle:{ color:C.line } },
+          axisLabel:Object.assign({}, BASE_TEXT, { formatter:function(v){ return (v/1000)+'к'; }, fontFamily:FONT_MONO }) },
+        yAxis:{ type:'category', data: svc.map(function(d){ return d.name; }),
+          axisLine:{ show:false }, axisTick:{ show:false }, axisLabel:BASE_TEXT },
+        series:[{ type:'bar', barWidth:'58%', data: svc.map(function(d){ return d.value; }),
+          itemStyle:{ color:C.pink, borderRadius:[0,6,6,0] } }]
+      });
+
+      /* воронка */
+      makeChart('chFunnel', {
+        tooltip:{ trigger:'item', backgroundColor:'#fff', borderColor:C.line, borderWidth:1,
+          textStyle:{ color:C.ink, fontFamily:FONT_UI },
+          formatter:function(p){ return p.name + ': <b>' + p.value + '</b>'; } },
+        series:[{ type:'funnel', top:10, bottom:10, left:'8%', width:'84%',
+          minSize:'38%', maxSize:'100%', gap:3, sort:'descending',
+          label:{ position:'inside', color:'#fff', fontFamily:FONT_UI, fontWeight:600,
+            formatter:function(p){ return p.name + ' · ' + p.value; } },
+          itemStyle:{ borderWidth:0 },
+          color:[C.pink, C.pinkStrong, C.plum, C.good],
+          data: TS.funnel.map(function(d){ return { name:d.name, value:d.value }; }) }]
+      });
+    }
+
+    /* перерисовка графиков при переключении на вкладки и ресайзе */
+    window.onTabChange = function(key){
+      if (key === 'overview') {
+        Object.keys(charts).forEach(function(id){ charts[id].resize(); });
+      }
+    };
+    window.addEventListener('resize', function(){
+      Object.keys(charts).forEach(function(id){ if (charts[id]) charts[id].resize(); });
+    });
+  })();
+  </script>
+</body>
+</html>
