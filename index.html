@@ -126,7 +126,7 @@
     </section>
 
     <!-- ====================== 06. КАК ЭТО РАБОТАЕТ ====================== -->
-    <section class="mkt-band mkt-band--ghost">
+    <section class="mkt-band mkt-band--ghost home-how">
       <div class="mkt-band__inner">
         <div class="mkt-band__head mkt-reveal">
           <p class="mkt-eyebrow">Просто</p>
@@ -162,28 +162,6 @@
           </span>
         </div>
         <div class="home-reviews mkt-reveal" data-d="1" id="reviewGrid"></div>
-      </div>
-    </section>
-
-    <!-- ====================== 08. СТАТЬ ПОДРЯДЧИКОМ ====================== -->
-    <section class="mkt-band mkt-band--ghost partner-band">
-      <div class="mkt-band__inner">
-        <div class="partner-strip mkt-reveal">
-          <div class="partner-strip__copy">
-            <p class="mkt-eyebrow">Для профессионалов</p>
-            <h2 class="partner-strip__title">Вы — кондитер, фотограф, аниматор?</h2>
-            <p class="partner-strip__lead">Pinkshar приводит клиента с готовым поводом и оплатой в эскроу. Комиссия 15% только с выполненных заказов — без платы за вход.</p>
-            <ul class="partner-strip__list">
-              <li>Готовый спрос — тёплая база 738+ праздников</li>
-              <li>Оплата гарантирована: деньги в эскроу до старта работ</li>
-              <li>Один чек для клиента, прозрачные выплаты вам</li>
-            </ul>
-          </div>
-          <div class="partner-strip__cta">
-            <a class="btn btn--primary btn--lg" href="partneram.html">Стать подрядчиком</a>
-            <span class="partner-strip__note">Уже 7 проверенных подрядчиков · рейтинг 5,0</span>
-          </div>
-        </div>
       </div>
     </section>
 
@@ -297,8 +275,16 @@
     .pop-card__old{font-family:var(--font-mono);font-size:12px;color:var(--faint);
       text-decoration:line-through;margin-left:4px}
 
-    /* --- STEPS --- */
-    /* переиспользуем .mkt-steps из app.css, добавляем контейнер */
+    /* --- «Как это работает»: компактнее --- */
+    .home-how{padding-block:24px}
+    .home-how .mkt-band__head{margin-bottom:var(--s-4)}
+    .home-how .mkt-steps{gap:var(--s-4)}
+    .home-how .escrow-note{margin-top:var(--s-4);padding:var(--s-3) var(--s-4)}
+    /* 12-я плитка «Все услуги» — ровные ряды */
+    .home-svc__item--all{justify-content:center;background:var(--pink-ghost);
+      border-style:dashed;border-color:var(--pink-soft)}
+    .home-svc__item--all .home-svc__name{color:var(--pink-strong)}
+    .home-svc__item--all .home-svc__emoji{color:var(--pink-strong)}
 
     /* --- ESCROW NOTE --- */
     .escrow-note{
@@ -363,7 +349,9 @@
       .popular-grid{grid-template-columns:1fr}
     }
 
-    /* --- финальная CTA-полоса: eyebrow --- */
+    /* --- финальная CTA-полоса: уже + скруглённая (не во всю ширину) --- */
+    .mkt-ctaband{max-width:var(--maxw);margin:0 auto var(--s-7);
+      border-radius:var(--r-lg);overflow:hidden}
     .mkt-ctaband__eyebrow{
       font-family:var(--font-mono);font-size:12.5px;font-weight:600;
       letter-spacing:.04em;text-transform:uppercase;color:rgba(255,255,255,.78);
@@ -463,7 +451,11 @@
         '</div>' +
         '<div class="home-svc__name">' + esc(name) + '</div>' +
         '<div class="home-svc__from">от ' + money(from) + '</div></a>';
-    }).join('');
+    }).join('') +
+      '<a class="home-svc__item home-svc__item--all" href="uslugi.html">' +
+        '<div class="home-svc__top"><span class="home-svc__emoji" aria-hidden="true">→</span></div>' +
+        '<div class="home-svc__name">Все услуги</div>' +
+        '<div class="home-svc__from">смотреть каталог</div></a>';
 
     /* ============================================================
        04. ЧАЩЕ ВСЕГО ЗАКАЗЫВАЮТ (топ-8 по rating*reviewsCount)
